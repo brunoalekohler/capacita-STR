@@ -1,12 +1,21 @@
 import { Colaborador, Capacitacao, ColaboradorDesempenho, DesempenhoCapacitacao, GoogleUser } from '../types';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
+import firebaseConfig from '../../firebase-applet-config.json';
 
-let cachedAccessToken: string | null = 'local';
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const provider = new GoogleAuthProvider();
+provider.addScope('https://www.googleapis.com/auth/drive.file');
+provider.addScope('https://www.googleapis.com/auth/spreadsheets');
+
+let cachedAccessToken: string | null = sessionStorage.getItem('aura_oauth_token');
 const defaultLocalUser: GoogleUser = {
   displayName: 'Administrador',
   email: 'contato@santarosamalhas.com',
   photoURL: null,
 };
-let cachedUser: GoogleUser | null = defaultLocalUser;
+let cachedUser: GoogleUser | null = JSON.parse(sessionStorage.getItem('aura_user_info') || 'null') || defaultLocalUser;
 
 // --- LOCALSTORAGE FALLBACK DB SETUP ---
 
@@ -120,6 +129,9 @@ const saveLocalDiario = (data: Record<string, DesempenhoCapacitacao[]>) => {
   localStorage.setItem('aura_local_diario', JSON.stringify(data));
 };
 
+// Flag to prevent infinite re-triggering during active popup sign-in
+let isSigningIn = false;
+
 // Initialize Google OAuth Client ID
 export const getGoogleClientId = (): string => {
   return localStorage.getItem('aura_google_client_id') || import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
@@ -129,19 +141,59 @@ export const setGoogleClientId = (clientId: string): void => {
   localStorage.setItem('aura_google_client_id', clientId.trim());
 };
 
-// Initialize auth state listener to always succeed with the default local user
+// Initialize auth state listener to listen to Firebase Auth
 export const initAuth = (
   onAuthSuccess?: (user: GoogleUser, token: string) => void,
   onAuthFailure?: () => void
 ) => {
-  if (onAuthSuccess) {
-    onAuthSuccess(defaultLocalUser, 'local');
-  }
-  return () => {};
+  return onAuthStateChanged(auth, async (firebaseUser) => {
+    if (firebaseUser) {
+      if (cachedAccessToken) {
+        const mappedUser: GoogleUser = {
+          displayName: firebaseUser.displayName || 'Treinador Google',
+          email: firebaseUser.email || '',
+          photoURL: firebaseUser.photoURL || null,
+        };
+        if (onAuthSuccess) onAuthSuccess(mappedUser, cachedAccessToken);
+      } else if (!isSigningIn) {
+        // We have a user but no access token (requires login click to get credentials)
+        if (onAuthFailure) onAuthFailure();
+      }
+    } else {
+      cachedAccessToken = null;
+      cachedUser = null;
+      if (onAuthFailure) onAuthFailure();
+    }
+  });
 };
 
 export const googleSignIn = async (providedClientId?: string): Promise<{ user: GoogleUser; accessToken: string } | null> => {
-  return { user: defaultLocalUser, accessToken: 'local' };
+  try {
+    isSigningIn = true;
+    const result = await signInWithPopup(auth, provider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (!credential?.accessToken) {
+      throw new Error('Falha ao obter token de acesso do Google.');
+    }
+    cachedAccessToken = credential.accessToken;
+    const mappedUser: GoogleUser = {
+      displayName: result.user.displayName || 'Treinador Google',
+      email: result.user.email || '',
+      photoURL: result.user.photoURL || null,
+    };
+    cachedUser = mappedUser;
+
+    // Save to session storage for persistence on refresh
+    sessionStorage.setItem('aura_oauth_token', cachedAccessToken);
+    sessionStorage.setItem('aura_user_info', JSON.stringify(mappedUser));
+
+    return { user: mappedUser, accessToken: cachedAccessToken };
+  } catch (err: any) {
+    console.error('Error during Google sign in:', err);
+    throw err;
+  } finally {
+    isSigningIn = false;
+  }
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
@@ -149,6 +201,7 @@ export const getAccessToken = async (): Promise<string | null> => {
 };
 
 export const logout = async () => {
+  await auth.signOut();
   cachedAccessToken = null;
   cachedUser = null;
   sessionStorage.removeItem('aura_oauth_token');

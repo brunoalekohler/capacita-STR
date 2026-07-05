@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Capacitacao } from '../types';
 import { 
   Search, Plus, BookOpen, FileText, Tag, Hash, 
-  Loader2, AlertCircle, Sparkles, FolderKanban, Check, X, Trash2
+  Loader2, AlertCircle, Sparkles, FolderKanban, Check, X, Trash2, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -40,6 +40,9 @@ export default function CapacitacoesTab({
   // Deletion confirmation state
   const [capToDelete, setCapToDelete] = useState<Capacitacao | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Detail viewer modal state
+  const [capToView, setCapToView] = useState<Capacitacao | null>(null);
 
   // Trigger search on "Procurar" button or Enter key
   const handleSearchTrigger = (e?: React.FormEvent) => {
@@ -256,12 +259,16 @@ export default function CapacitacoesTab({
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-50 flex items-center justify-between text-[10px] text-slate-400 font-medium font-mono">
-                <span>Código: {cap.codigo}</span>
-                <span className="text-indigo-500 font-semibold uppercase font-sans tracking-wider flex items-center gap-1">
-                  <Sparkles className="h-3 w-3 animate-pulse" />
-                  Ativo no portal
-                </span>
+              <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
+                <span className="text-[10px] text-slate-400 font-mono">Código: {cap.codigo}</span>
+                <button
+                  type="button"
+                  onClick={() => setCapToView(cap)}
+                  className="inline-flex items-center space-x-1 text-xs text-indigo-600 hover:text-indigo-800 font-bold transition-colors cursor-pointer"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  <span>Ver Detalhes</span>
+                </button>
               </div>
             </div>
           ))}
@@ -421,6 +428,88 @@ export default function CapacitacoesTab({
                   </button>
                 </div>
               </form>
+
+            </div>
+          </div>
+        )}
+
+        {/* Detail Viewer Modal */}
+        {capToView && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity" onClick={() => setCapToView(null)} />
+
+            {/* Modal Box */}
+            <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              
+              {/* Header */}
+              <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-4 flex justify-between items-center text-white flex-shrink-0">
+                <div className="flex items-center space-x-2">
+                  <BookOpen className="h-5 w-5 text-indigo-400" />
+                  <div>
+                    <h3 className="font-display font-semibold text-base">Detalhes da Capacitação</h3>
+                    <p className="text-[10px] text-slate-300 font-mono tracking-wider">{capToView.codigo}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCapToView(null)}
+                  className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-5 overflow-y-auto flex-1">
+                {/* Meta Details */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100/80">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Código Único</span>
+                    <span className="text-sm font-bold font-mono text-slate-700">{capToView.codigo}</span>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100/80">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Tipo / Categoria</span>
+                    <span className="text-sm font-semibold text-slate-700">{capToView.tipo}</span>
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div className="space-y-1">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Título</span>
+                  <h4 className="text-lg font-bold text-slate-800 leading-snug">{capToView.titulo}</h4>
+                </div>
+
+                {/* Full Description */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Descrição Completa</span>
+                  <div className="bg-slate-50/50 rounded-xl border border-slate-100 p-4 min-h-[120px]">
+                    <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">{capToView.descricao}</p>
+                  </div>
+                </div>
+
+                {/* Status info banner */}
+                <div className="bg-indigo-50/50 border border-indigo-100/50 rounded-xl p-3 flex items-center justify-between">
+                  <span className="text-xs text-indigo-800 font-medium flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4 text-indigo-500 animate-pulse" />
+                    Ativo no portal de treinamentos
+                  </span>
+                  <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    Sincronizado
+                  </span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="bg-slate-50 px-6 py-4 flex items-center justify-end border-t border-slate-100 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setCapToView(null)}
+                  className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold transition-all shadow-xs cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
 
             </div>
           </div>

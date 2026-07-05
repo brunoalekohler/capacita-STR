@@ -20,12 +20,21 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
-  const [user, setUser] = useState<GoogleUser | null>({
-    displayName: 'Administrador',
-    email: 'contato@santarosamalhas.com',
-    photoURL: null,
+  const [spreadsheetId, setSpreadsheetId] = useState<string | null>(() => {
+    return localStorage.getItem('aura_spreadsheet_id') || 'local';
   });
-  const [token, setToken] = useState<string | null>('local');
+  const [user, setUser] = useState<GoogleUser | null>(() => {
+    const isLocal = !localStorage.getItem('aura_spreadsheet_id') || localStorage.getItem('aura_spreadsheet_id') === 'local';
+    return isLocal ? {
+      displayName: 'Administrador (Modo Local)',
+      email: 'contato@santarosamalhas.com',
+      photoURL: null,
+    } : null;
+  });
+  const [token, setToken] = useState<string | null>(() => {
+    const isLocal = !localStorage.getItem('aura_spreadsheet_id') || localStorage.getItem('aura_spreadsheet_id') === 'local';
+    return isLocal ? 'local' : null;
+  });
   const [needsAuth, setNeedsAuth] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -34,7 +43,6 @@ export default function App() {
   const [showConfig, setShowConfig] = useState(false);
 
   // Spreadsheet State
-  const [spreadsheetId, setSpreadsheetId] = useState<string | null>('local');
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [isLoadingColaboradores, setIsLoadingColaboradores] = useState(false);
   const [colaboradoresError, setColaboradoresError] = useState<string | null>(null);
@@ -77,6 +85,17 @@ export default function App() {
 
   // Listen for Authentication state changes
   useEffect(() => {
+    if (!spreadsheetId || spreadsheetId === 'local') {
+      setUser({
+        displayName: 'Administrador (Modo Local)',
+        email: 'contato@santarosamalhas.com',
+        photoURL: null,
+      });
+      setToken('local');
+      setNeedsAuth(false);
+      return;
+    }
+
     const unsubscribe = initAuth(
       (currentUser, accessToken) => {
         setToken(accessToken);
@@ -90,7 +109,7 @@ export default function App() {
       }
     );
     return () => unsubscribe();
-  }, []);
+  }, [spreadsheetId]);
 
   // Fetch collaborators when token and spreadsheetId are ready
   const loadData = async (targetId: string = spreadsheetId || '') => {
@@ -240,18 +259,19 @@ export default function App() {
 
   // Google Login Handler
   const handleLogin = async () => {
-    const cid = getGoogleClientId();
-    if (!cid) {
-      setShowConfig(true);
-      showToast('Por favor, configure o seu Google Client ID para poder acessar com o Google.', 'error');
-      return;
-    }
     setIsLoggingIn(true);
     try {
-      await googleSignIn(cid);
+      const result = await googleSignIn();
+      if (result) {
+        setToken(result.accessToken);
+        setUser(result.user);
+        setNeedsAuth(false);
+        showToast('Login realizado com sucesso!', 'success', `Conectado como ${result.user.displayName}`);
+      }
     } catch (err: any) {
       console.error('Login failed:', err);
       showToast(err.message || 'Falha na autenticação do Google', 'error');
+    } finally {
       setIsLoggingIn(false);
     }
   };
@@ -259,11 +279,16 @@ export default function App() {
   // Logout Handler (Completely logs out of Google and resets application state)
   const handleLogout = async () => {
     await logout();
-    setUser(null);
-    setToken(null);
-    setNeedsAuth(true);
-    setColaboradores([]);
-    showToast('Sessão encerrada com sucesso.', 'success');
+    setUser({
+      displayName: 'Administrador (Modo Local)',
+      email: 'contato@santarosamalhas.com',
+      photoURL: null,
+    });
+    setToken('local');
+    setSpreadsheetId('local');
+    localStorage.removeItem('aura_spreadsheet_id');
+    setNeedsAuth(false);
+    showToast('Sessão encerrada. Retornando ao Modo Local.', 'success');
   };
 
   // Disconnect Database Connection (Completely logs out of Google and User Session)
@@ -605,6 +630,61 @@ export default function App() {
         ) : (
           /* Dashboard view: Authenticated & Connected */
           <div className="space-y-6">
+            {spreadsheetId === 'local' ? (
+              <div className="bg-amber-50/70 border border-amber-200/60 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-start space-x-3">
+                  <div className="bg-amber-100/80 text-amber-850 p-2 rounded-xl mt-0.5">
+                    <Database className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">Você está no Modo Local (Demonstração)</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Os dados estão salvos localmente no seu navegador. Conecte com o Google Sheets para salvar na nuvem e colaborar em tempo real.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setSpreadsheetId(null);
+                    setNeedsAuth(true);
+                  }}
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs px-4 py-2.5 rounded-xl cursor-pointer transition-all self-start sm:self-center"
+                >
+                  Conectar Google Sheets
+                </button>
+              </div>
+            ) : (
+              <div className="bg-emerald-50/70 border border-emerald-200/60 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-start space-x-3">
+                  <div className="bg-emerald-100/80 text-emerald-850 p-2 rounded-xl mt-0.5">
+                    <FileSpreadsheet className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">Conectado ao Google Sheets</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Sincronização em tempo real ativa. ID da planilha: <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[11px] font-bold">{spreadsheetId}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2.5">
+                  <a
+                    href={currentSheetUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-4 py-2.5 rounded-xl cursor-pointer transition-all"
+                  >
+                    Abrir Planilha
+                  </a>
+                  <button
+                    onClick={handleDisconnectSpreadsheet}
+                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs px-4 py-2.5 rounded-xl cursor-pointer transition-all"
+                  >
+                    Desconectar
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Tab Switcher */}
             <div className="flex border-b border-slate-100 space-x-1.5 p-1 bg-slate-50 rounded-2xl max-w-lg">
               <button
@@ -784,8 +864,10 @@ export default function App() {
           <p className="text-xs text-slate-400 font-medium">
             Portal do Treinador • Todos os direitos reservados.
           </p>
-          <p className="text-[10px] text-slate-300 font-mono">
-            Banco de Dados Local (LocalStorage)
+          <p className="text-[10px] text-slate-400 font-mono">
+            {spreadsheetId === 'local' 
+              ? 'Banco de Dados Local (LocalStorage)' 
+              : `Sincronizado com Google Sheets (Planilha ID: ${spreadsheetId})`}
           </p>
         </div>
       </footer>

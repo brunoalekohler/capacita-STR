@@ -83,11 +83,6 @@ export default function ColaboradoresTable({
     }
   }, [filteredColaboradores, colaboradores, selectedColaborador]);
 
-  const handleStatusToggle = async (colab: Colaborador, e: React.MouseEvent) => {
-    e.stopPropagation();
-    await onToggleStatus(colab);
-  };
-
   return (
     <div className="space-y-6">
       {/* Stats row */}
@@ -262,16 +257,15 @@ export default function ColaboradoresTable({
                           </div>
                         </td>
 
-                        {/* Status Toggle Badge */}
-                        <td className="px-4 py-4 text-center">
-                          <button
-                            onClick={(e) => handleStatusToggle(colab, e)}
-                            className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all border ${colab.status === 'Ativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100 hover:bg-rose-100'}`}
-                            title="Clique para alternar status"
+                        {/* Status Badge */}
+                        <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div
+                            className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold border ${colab.status === 'Ativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}
+                            title={colab.status === 'Ativo' ? 'Ativo (Sem data de demissão)' : 'Desativado (Com data de demissão)'}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${colab.status === 'Ativo' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                             <span>{colab.status}</span>
-                          </button>
+                          </div>
                         </td>
 
                         {/* Edit Action */}
