@@ -1,13 +1,4 @@
 import { Colaborador, Capacitacao, ColaboradorDesempenho, DesempenhoCapacitacao, GoogleUser } from '../types';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
-
-const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
-const provider = new GoogleAuthProvider();
-provider.addScope('https://www.googleapis.com/auth/drive.file');
-provider.addScope('https://www.googleapis.com/auth/spreadsheets');
 
 let cachedAccessToken: string | null = sessionStorage.getItem('aura_oauth_token');
 const defaultLocalUser: GoogleUser = {
@@ -134,66 +125,137 @@ let isSigningIn = false;
 
 // Initialize Google OAuth Client ID
 export const getGoogleClientId = (): string => {
-  return localStorage.getItem('aura_google_client_id') || import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+  return localStorage.getItem('aura_google_client_id') || import.meta.env.VITE_GOOGLE_CLIENT_ID || '740959969668-sbs39fiuuj9ka0jot933vac658fha1ku.apps.googleusercontent.com';
 };
 
 export const setGoogleClientId = (clientId: string): void => {
   localStorage.setItem('aura_google_client_id', clientId.trim());
 };
 
-// Initialize auth state listener to listen to Firebase Auth
-export const initAuth = (
-  onAuthSuccess?: (user: GoogleUser, token: string) => void,
-  onAuthFailure?: () => void
-) => {
-  return onAuthStateChanged(auth, async (firebaseUser) => {
-    if (firebaseUser) {
-      if (cachedAccessToken) {
-        const mappedUser: GoogleUser = {
-          displayName: firebaseUser.displayName || 'Treinador Google',
-          email: firebaseUser.email || '',
-          photoURL: firebaseUser.photoURL || null,
-        };
-        if (onAuthSuccess) onAuthSuccess(mappedUser, cachedAccessToken);
-      } else if (!isSigningIn) {
-        // We have a user but no access token (requires login click to get credentials)
-        if (onAuthFailure) onAuthFailure();
+// Helper to dynamically load the Google Identity Services script
+export const initGoogleGisAuth = (): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') return reject(new Error('Browser only'));
+    
+    const checkGis = () => {
+      if ((window as any).google?.accounts?.oauth2) {
+        resolve((window as any).google.accounts.oauth2);
+      } else {
+        setTimeout(checkGis, 100);
+      }
+    };
+
+    if (!(window as any).google?.accounts?.oauth2) {
+      if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => checkGis();
+        script.onerror = () => reject(new Error('Falha ao carregar o script Google GIS'));
+        document.head.appendChild(script);
+      } else {
+        checkGis();
       }
     } else {
-      cachedAccessToken = null;
-      cachedUser = null;
-      if (onAuthFailure) onAuthFailure();
+      resolve((window as any).google.accounts.oauth2);
     }
   });
 };
 
-export const googleSignIn = async (providedClientId?: string): Promise<{ user: GoogleUser; accessToken: string } | null> => {
-  try {
-    isSigningIn = true;
-    const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error('Falha ao obter token de acesso do Google.');
+// Initialize auth state listener using local cached data
+export const initAuth = (
+  onAuthSuccess?: (user: GoogleUser, token: string) => void,
+  onAuthFailure?: () => void
+) => {
+  const token = sessionStorage.getItem('aura_oauth_token');
+  const userStr = sessionStorage.getItem('aura_user_info');
+  if (token && userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      cachedAccessToken = token;
+      cachedUser = user;
+      if (onAuthSuccess) onAuthSuccess(user, token);
+    } catch (e) {
+      cachedAccessToken = null;
+      cachedUser = null;
+      if (onAuthFailure) onAuthFailure();
     }
-    cachedAccessToken = credential.accessToken;
-    const mappedUser: GoogleUser = {
-      displayName: result.user.displayName || 'Treinador Google',
-      email: result.user.email || '',
-      photoURL: result.user.photoURL || null,
-    };
-    cachedUser = mappedUser;
-
-    // Save to session storage for persistence on refresh
-    sessionStorage.setItem('aura_oauth_token', cachedAccessToken);
-    sessionStorage.setItem('aura_user_info', JSON.stringify(mappedUser));
-
-    return { user: mappedUser, accessToken: cachedAccessToken };
-  } catch (err: any) {
-    console.error('Error during Google sign in:', err);
-    throw err;
-  } finally {
-    isSigningIn = false;
+  } else {
+    cachedAccessToken = null;
+    cachedUser = null;
+    if (onAuthFailure) onAuthFailure();
   }
+  return () => {};
+};
+
+export const googleSignIn = async (providedClientId?: string): Promise<{ user: GoogleUser; accessToken: string } | null> => {
+  const clientId = providedClientId || getGoogleClientId();
+  if (!clientId) {
+    throw new Error('Google Client ID não configurado. Por favor, adicione o seu Client ID nas configurações de desenvolvedor abaixo.');
+  }
+
+  isSigningIn = true;
+  const oauth2 = await initGoogleGisAuth();
+
+  return new Promise((resolve, reject) => {
+    try {
+      const client = oauth2.initTokenClient({
+        client_id: clientId,
+        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
+        callback: async (tokenResponse: any) => {
+          isSigningIn = false;
+          if (tokenResponse.error) {
+            reject(new Error(`Erro de login do Google: ${tokenResponse.error_description || tokenResponse.error}`));
+            return;
+          }
+          if (!tokenResponse.access_token) {
+            reject(new Error('Não foi possível obter o token de acesso.'));
+            return;
+          }
+
+          cachedAccessToken = tokenResponse.access_token;
+          sessionStorage.setItem('aura_oauth_token', cachedAccessToken!);
+
+          // Fetch user info from Google Endpoint
+          try {
+            const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { 'Authorization': `Bearer ${cachedAccessToken}` }
+            });
+            if (userInfoRes.ok) {
+              const info = await userInfoRes.json();
+              cachedUser = {
+                displayName: info.name || info.given_name || 'Treinador Google',
+                email: info.email || '',
+                photoURL: info.picture || null,
+              };
+              sessionStorage.setItem('aura_user_info', JSON.stringify(cachedUser));
+            } else {
+              cachedUser = {
+                displayName: 'Treinador Google',
+                email: '',
+                photoURL: null,
+              };
+            }
+          } catch (e) {
+            console.warn('Could not fetch user info, using fallback name:', e);
+            cachedUser = {
+              displayName: 'Treinador Google',
+              email: '',
+              photoURL: null,
+            };
+          }
+
+          resolve({ user: cachedUser, accessToken: cachedAccessToken! });
+        },
+      });
+
+      client.requestAccessToken({ prompt: 'select_account' });
+    } catch (err: any) {
+      isSigningIn = false;
+      reject(err);
+    }
+  });
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
@@ -201,7 +263,6 @@ export const getAccessToken = async (): Promise<string | null> => {
 };
 
 export const logout = async () => {
-  await auth.signOut();
   cachedAccessToken = null;
   cachedUser = null;
   sessionStorage.removeItem('aura_oauth_token');
