@@ -1,0 +1,6 @@
+{
+  "name": "Portal do Treinador",
+  "description": "Portal corporativo para o treinador gerenciar e capacitar colaboradores.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
