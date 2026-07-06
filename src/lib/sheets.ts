@@ -1,4 +1,4 @@
-import { Colaborador, Capacitacao, ColaboradorDesempenho, DesempenhoCapacitacao, GoogleUser } from '../types';
+import { Colaborador, Capacitacao, Treinamento, ColaboradorDesempenho, DesempenhoCapacitacao, GoogleUser } from '../types';
 
 let cachedAccessToken: string | null = sessionStorage.getItem('aura_oauth_token');
 const defaultLocalUser: GoogleUser = {
@@ -69,6 +69,23 @@ const DEFAULT_CAPACITACOES: Capacitacao[] = [
   }
 ];
 
+const DEFAULT_TREINAMENTOS: Treinamento[] = [
+  {
+    codigo: 'TRE-001',
+    titulo: 'Segurança no Trabalho',
+    descricao: 'Treinamento essencial sobre normas de segurança e uso de EPIs.',
+    tipo: 'Obrigatório',
+    rowIndex: 2
+  },
+  {
+    codigo: 'TRE-002',
+    titulo: 'Qualidade em Malharia',
+    descricao: 'Treinamento sobre padrões de qualidade de tecidos e inspeção de defeitos.',
+    tipo: 'Técnico',
+    rowIndex: 3
+  }
+];
+
 const DEFAULT_DIARIO_PERFORMANCE: Record<string, DesempenhoCapacitacao[]> = {
   '123.456.789-00': [
     { codigo: 'CAP-001', descricao: 'Se destacou na integração', nota: 9.5 }
@@ -79,6 +96,12 @@ const DEFAULT_DIARIO_PERFORMANCE: Record<string, DesempenhoCapacitacao[]> = {
   '456.789.123-22': [
     { codigo: 'CAP-001', descricao: 'Excelente desempenho', nota: 10.0 }
   ]
+};
+
+const DEFAULT_DIARIO_TREINAMENTOS: Record<string, string[]> = {
+  '123.456.789-00': ['TRE-001'],
+  '987.654.321-11': ['TRE-001', 'TRE-002'],
+  '456.789.123-22': ['TRE-002']
 };
 
 const getLocalColaboradores = (): Colaborador[] => {
@@ -107,6 +130,19 @@ const saveLocalCapacitacoes = (data: Capacitacao[]) => {
   localStorage.setItem('aura_local_capacitacoes', JSON.stringify(data));
 };
 
+const getLocalTreinamentos = (): Treinamento[] => {
+  const stored = localStorage.getItem('aura_local_treinamentos');
+  if (!stored) {
+    localStorage.setItem('aura_local_treinamentos', JSON.stringify(DEFAULT_TREINAMENTOS));
+    return DEFAULT_TREINAMENTOS;
+  }
+  return JSON.parse(stored);
+};
+
+const saveLocalTreinamentos = (data: Treinamento[]) => {
+  localStorage.setItem('aura_local_treinamentos', JSON.stringify(data));
+};
+
 const getLocalDiario = (): Record<string, DesempenhoCapacitacao[]> => {
   const stored = localStorage.getItem('aura_local_diario');
   if (!stored) {
@@ -118,6 +154,19 @@ const getLocalDiario = (): Record<string, DesempenhoCapacitacao[]> => {
 
 const saveLocalDiario = (data: Record<string, DesempenhoCapacitacao[]>) => {
   localStorage.setItem('aura_local_diario', JSON.stringify(data));
+};
+
+const getLocalDiarioTreinamentos = (): Record<string, string[]> => {
+  const stored = localStorage.getItem('aura_local_diario_treinamentos');
+  if (!stored) {
+    localStorage.setItem('aura_local_diario_treinamentos', JSON.stringify(DEFAULT_DIARIO_TREINAMENTOS));
+    return DEFAULT_DIARIO_TREINAMENTOS;
+  }
+  return JSON.parse(stored);
+};
+
+const saveLocalDiarioTreinamentos = (data: Record<string, string[]>) => {
+  localStorage.setItem('aura_local_diario_treinamentos', JSON.stringify(data));
 };
 
 // Flag to prevent infinite re-triggering during active popup sign-in
@@ -411,6 +460,7 @@ export async function addColaborador(
   try {
     await ensurePainelDesempenhoSheet(spreadsheetId);
     const pad = Array(30).fill('');
+    const padTrein = Array(50).fill('');
     const performanceValues = [
       [
         colaborador.nomeCompleto,
@@ -423,15 +473,16 @@ export async function addColaborador(
         colaborador.cargo,
         colaborador.emailPessoal,
         colaborador.emailEmpresarial,
-        ...pad
+        ...pad,
+        ...padTrein
       ]
     ];
     await sheetsApiRequest(
-      `v4/spreadsheets/${spreadsheetId}/values/PAINEL DESEMPENHO!A:AN:append?valueInputOption=USER_ENTERED`,
+      `v4/spreadsheets/${spreadsheetId}/values/PAINEL DESEMPENHO!A:CL:append?valueInputOption=USER_ENTERED`,
       {
         method: 'POST',
         body: JSON.stringify({
-          range: 'PAINEL DESEMPENHO!A:AN',
+          range: 'PAINEL DESEMPENHO!A:CL',
           majorDimension: 'ROWS',
           values: performanceValues,
         }),
@@ -613,6 +664,7 @@ export async function getSpreadsheetDetails(spreadsheetId: string) {
         { properties: { title: 'Colaboradores', sheetId: 0 } },
         { properties: { title: 'CAPACITAÇÕES', sheetId: 1 } },
         { properties: { title: 'PAINEL DESEMPENHO', sheetId: 2 } },
+        { properties: { title: 'TREINAMENTOS', sheetId: 4 } },
         { properties: { title: 'LOGIN', sheetId: 3 } }
       ]
     };
@@ -809,7 +861,7 @@ export async function ensurePainelDesempenhoSheet(spreadsheetId: string): Promis
         }),
       });
 
-      // Build Headers: Cols A to J (General) and Cols K to AN (10 Capacitações)
+      // Build Headers: Cols A to J (General), Cols K to AN (10 Capacitações), and Cols AO to CL (50 Treinamentos)
       const headers = [
         'Nome Completo',
         'CPF',
@@ -829,6 +881,10 @@ export async function ensurePainelDesempenhoSheet(spreadsheetId: string): Promis
         headers.push(`Capacitação ${i} - Nota`);
       }
 
+      for (let i = 1; i <= 50; i++) {
+        headers.push(`Treinamento ${i}`);
+      }
+
       const rowsToWrite = [headers];
 
       // Let's get any existing collaborators to populate
@@ -846,7 +902,8 @@ export async function ensurePainelDesempenhoSheet(spreadsheetId: string): Promis
             col.cargo,
             col.emailPessoal,
             col.emailEmpresarial,
-            ...Array(30).fill('') // empty performance slots
+            ...Array(30).fill(''), // empty performance slots
+            ...Array(50).fill('')  // empty training slots
           ];
           rowsToWrite.push(colRow);
         }
@@ -855,16 +912,60 @@ export async function ensurePainelDesempenhoSheet(spreadsheetId: string): Promis
       }
 
       await sheetsApiRequest(
-        `v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent('PAINEL DESEMPENHO')}!A1:AN${rowsToWrite.length}?valueInputOption=USER_ENTERED`,
+        `v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent('PAINEL DESEMPENHO')}!A1:CL${rowsToWrite.length}?valueInputOption=USER_ENTERED`,
         {
           method: 'PUT',
           body: JSON.stringify({
-            range: `PAINEL DESEMPENHO!A1:AN${rowsToWrite.length}`,
+            range: `PAINEL DESEMPENHO!A1:CL${rowsToWrite.length}`,
             majorDimension: 'ROWS',
             values: rowsToWrite,
           }),
         }
       );
+    } else {
+      // Check if headers need updating to include Treinamento columns
+      try {
+        const firstRowData = await sheetsApiRequest(`v4/spreadsheets/${spreadsheetId}/values/PAINEL DESEMPENHO!A1:CL1`);
+        const firstRow = firstRowData.values?.[0] || [];
+        if (firstRow.length < 90 || !firstRow.includes('Treinamento 1')) {
+          const headers = [
+            'Nome Completo',
+            'CPF',
+            'Data de Nascimento',
+            'Admissão',
+            'Demissão',
+            'Status',
+            'Unidade',
+            'Cargo',
+            'Email Pessoal',
+            'Email Empresarial'
+          ];
+
+          for (let i = 1; i <= 10; i++) {
+            headers.push(`Capacitação ${i} - Código`);
+            headers.push(`Capacitação ${i} - Desenvolvimento`);
+            headers.push(`Capacitação ${i} - Nota`);
+          }
+
+          for (let i = 1; i <= 50; i++) {
+            headers.push(`Treinamento ${i}`);
+          }
+
+          await sheetsApiRequest(
+            `v4/spreadsheets/${spreadsheetId}/values/PAINEL DESEMPENHO!A1:CL1?valueInputOption=USER_ENTERED`,
+            {
+              method: 'PUT',
+              body: JSON.stringify({
+                range: 'PAINEL DESEMPENHO!A1:CL1',
+                majorDimension: 'ROWS',
+                values: [headers],
+              }),
+            }
+          );
+        }
+      } catch (err) {
+        console.warn('Could not update PAINEL DESEMPENHO headers:', err);
+      }
     }
   } catch (err) {
     console.error('Error ensuring PAINEL DESEMPENHO sheet exists:', err);
@@ -876,18 +977,21 @@ export async function fetchDiarioAprendizado(spreadsheetId: string): Promise<Col
   if (spreadsheetId === 'local' || !cachedAccessToken || cachedAccessToken === 'local') {
     const colabs = getLocalColaboradores();
     const diary = getLocalDiario();
+    const diaryTreinamentos = getLocalDiarioTreinamentos();
     return colabs.map(c => {
       const desempenhos = diary[c.cpf] || [];
+      const treinamentos = diaryTreinamentos[c.cpf] || [];
       return {
         ...c,
-        desempenhos
+        desempenhos,
+        treinamentos
       };
     });
   }
   try {
     await ensurePainelDesempenhoSheet(spreadsheetId);
     
-    const data = await sheetsApiRequest(`v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent('PAINEL DESEMPENHO')}!A:AN`);
+    const data = await sheetsApiRequest(`v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent('PAINEL DESEMPENHO')}!A:CL`);
     const rows = data.values as string[][] | undefined;
     if (!rows || rows.length === 0) {
       return [];
@@ -917,6 +1021,15 @@ export async function fetchDiarioAprendizado(spreadsheetId: string): Promise<Col
         }
       }
 
+      const treinamentos: string[] = [];
+      for (let j = 0; j < 50; j++) {
+        const idx = 40 + j;
+        const trainCode = row[idx] !== undefined ? row[idx].trim() : '';
+        if (trainCode) {
+          treinamentos.push(trainCode);
+        }
+      }
+
       list.push({
         nomeCompleto: val(0),
         cpf: val(1),
@@ -929,7 +1042,8 @@ export async function fetchDiarioAprendizado(spreadsheetId: string): Promise<Col
         emailPessoal: val(8),
         emailEmpresarial: val(9),
         rowIndex: i + 1,
-        desempenhos
+        desempenhos,
+        treinamentos
       });
     }
 
@@ -1066,6 +1180,208 @@ export async function verifyCredentials(
   }
 
   throw new Error('Usuário ou senha inválidos.');
+}
+
+// 15. Ensure TREINAMENTOS sheet exists, create it and populate with defaults if not
+export async function ensureTreinamentosSheet(spreadsheetId: string): Promise<void> {
+  if (spreadsheetId === 'local' || !cachedAccessToken || cachedAccessToken === 'local') {
+    return;
+  }
+  try {
+    const details = await getSpreadsheetDetails(spreadsheetId);
+    const hasTreinamentos = details.sheets?.some(
+      (s: any) => s.properties?.title?.toUpperCase() === 'TREINAMENTOS'
+    );
+    if (!hasTreinamentos) {
+      // Create the sheet
+      await sheetsApiRequest(`v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+        method: 'POST',
+        body: JSON.stringify({
+          requests: [
+            {
+              addSheet: {
+                properties: {
+                  title: 'TREINAMENTOS',
+                },
+              },
+            },
+          ],
+        }),
+      });
+
+      // Initialize headers: A1 = Código do treinamento, B1 = título, C1 = Descrição, D1 = Tipo de treinamento
+      const headers = [
+        ['Código do treinamento', 'título', 'Descrição', 'Tipo de treinamento'],
+        ['TRE-001', 'Segurança no Trabalho', 'Treinamento essencial sobre normas de segurança e uso de EPIs.', 'Obrigatório'],
+        ['TRE-002', 'Qualidade em Malharia', 'Treinamento sobre padrões de qualidade de tecidos e inspeção de defeitos.', 'Técnico']
+      ];
+      await sheetsApiRequest(
+        `v4/spreadsheets/${spreadsheetId}/values/TREINAMENTOS!A1:D3?valueInputOption=USER_ENTERED`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            range: 'TREINAMENTOS!A1:D3',
+            majorDimension: 'ROWS',
+            values: headers,
+          }),
+        }
+      );
+    }
+  } catch (err) {
+    console.error('Error ensuring TREINAMENTOS sheet exists:', err);
+  }
+}
+
+// 16. Fetch Treinamentos
+export async function fetchTreinamentos(spreadsheetId: string): Promise<Treinamento[]> {
+  if (spreadsheetId === 'local' || !cachedAccessToken || cachedAccessToken === 'local') {
+    return getLocalTreinamentos();
+  }
+  try {
+    await ensureTreinamentosSheet(spreadsheetId);
+    
+    const data = await sheetsApiRequest(`v4/spreadsheets/${spreadsheetId}/values/TREINAMENTOS!A:D`);
+    const rows = data.values as string[][] | undefined;
+    if (!rows || rows.length <= 1) {
+      return [];
+    }
+
+    const list: Treinamento[] = [];
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const val = (index: number) => (row[index] !== undefined ? row[index].trim() : '');
+      if (!val(0) && !val(1)) continue;
+      
+      list.push({
+        codigo: val(0),
+        titulo: val(1),
+        descricao: val(2),
+        tipo: val(3),
+        rowIndex: i + 1,
+      });
+    }
+    return list;
+  } catch (error) {
+    console.error('Error fetching treinamentos:', error);
+    throw error;
+  }
+}
+
+// 17. Add Treinamento
+export async function addTreinamento(
+  spreadsheetId: string,
+  train: Omit<Treinamento, 'rowIndex'>
+): Promise<void> {
+  if (spreadsheetId === 'local' || !cachedAccessToken || cachedAccessToken === 'local') {
+    const list = getLocalTreinamentos();
+    const nextRowIndex = list.length > 0 ? Math.max(...list.map(t => t.rowIndex)) + 1 : 2;
+    const newTrain: Treinamento = { ...train, rowIndex: nextRowIndex };
+    list.push(newTrain);
+    saveLocalTreinamentos(list);
+    return;
+  }
+  await ensureTreinamentosSheet(spreadsheetId);
+  
+  const values = [
+    [
+      train.codigo,
+      train.titulo,
+      train.descricao,
+      train.tipo,
+    ],
+  ];
+
+  await sheetsApiRequest(
+    `v4/spreadsheets/${spreadsheetId}/values/TREINAMENTOS!A:D:append?valueInputOption=USER_ENTERED`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        range: 'TREINAMENTOS!A:D',
+        majorDimension: 'ROWS',
+        values,
+      }),
+    }
+  );
+}
+
+// 18. Delete Treinamento row physically
+export async function deleteTreinamento(spreadsheetId: string, rowIndex: number): Promise<void> {
+  if (spreadsheetId === 'local' || !cachedAccessToken || cachedAccessToken === 'local') {
+    let list = getLocalTreinamentos();
+    list = list.filter(t => t.rowIndex !== rowIndex);
+    list.forEach((t, index) => {
+      t.rowIndex = index + 2;
+    });
+    saveLocalTreinamentos(list);
+    return;
+  }
+  const details = await getSpreadsheetDetails(spreadsheetId);
+  const sheet = details.sheets?.find(
+    (s: any) => s.properties?.title?.toUpperCase() === 'TREINAMENTOS'
+  );
+  if (!sheet) {
+    throw new Error('Aba "TREINAMENTOS" não encontrada na planilha.');
+  }
+  
+  const sheetId = sheet.properties.sheetId;
+  const startIndex = rowIndex - 1;
+  const endIndex = rowIndex;
+
+  await sheetsApiRequest(`v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+    method: 'POST',
+    body: JSON.stringify({
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId: sheetId,
+              dimension: 'ROWS',
+              startIndex: startIndex,
+              endIndex: endIndex,
+            },
+          },
+        },
+      ],
+    }),
+  });
+}
+
+// 19. Update assigned trainings (Treinamentos) for a Collaborator
+export async function updateTreinamentosAtribuidos(
+  spreadsheetId: string,
+  rowIndex: number,
+  treinamentos: string[]
+): Promise<void> {
+  if (spreadsheetId === 'local' || !cachedAccessToken || cachedAccessToken === 'local') {
+    const colabs = getLocalColaboradores();
+    const colab = colabs.find(c => c.rowIndex === rowIndex);
+    if (colab) {
+      const diary = getLocalDiarioTreinamentos();
+      diary[colab.cpf] = treinamentos;
+      saveLocalDiarioTreinamentos(diary);
+    }
+    return;
+  }
+  await ensurePainelDesempenhoSheet(spreadsheetId);
+
+  // Pad the array up to 50 items
+  const flatValues: string[] = [];
+  for (let j = 0; j < 50; j++) {
+    flatValues.push(treinamentos[j] || '');
+  }
+
+  const range = `PAINEL DESEMPENHO!AO${rowIndex}:CL${rowIndex}`;
+  await sheetsApiRequest(
+    `v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({
+        range,
+        majorDimension: 'ROWS',
+        values: [flatValues],
+      }),
+    }
+  );
 }
 
 

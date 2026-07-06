@@ -4,14 +4,16 @@ import {
   addColaborador, updateColaborador, createNewSpreadsheet,
   fetchCapacitacoes, addCapacitacao, deleteCapacitacao,
   fetchDiarioAprendizado, updateDiarioAprendizado,
-  getGoogleClientId, setGoogleClientId
+  getGoogleClientId, setGoogleClientId,
+  fetchTreinamentos, addTreinamento, deleteTreinamento, updateTreinamentosAtribuidos
 } from './lib/sheets';
-import { Colaborador, Capacitacao, ColaboradorDesempenho, DesempenhoCapacitacao, GoogleUser } from './types';
+import { Colaborador, Capacitacao, Treinamento, ColaboradorDesempenho, DesempenhoCapacitacao, GoogleUser } from './types';
 import Header from './components/Header';
 import SpreadsheetConnect from './components/SpreadsheetConnect';
 import ColaboradoresTable from './components/ColaboradoresTable';
 import ColaboradorForm from './components/ColaboradorForm';
 import CapacitacoesTab from './components/CapacitacoesTab';
+import TreinamentosTab from './components/TreinamentosTab';
 import DiarioAprendizadoTab from './components/DiarioAprendizadoTab';
 import { 
   GraduationCap, Sparkles, CheckCircle2, ChevronRight, FileSpreadsheet,
@@ -52,13 +54,18 @@ export default function App() {
   const [isLoadingCapacitacoes, setIsLoadingCapacitacoes] = useState(false);
   const [capacitacoesError, setCapacitacoesError] = useState<string | null>(null);
 
+  // Treinamentos State
+  const [treinamentos, setTreinamentos] = useState<Treinamento[]>([]);
+  const [isLoadingTreinamentos, setIsLoadingTreinamentos] = useState(false);
+  const [treinamentosError, setTreinamentosError] = useState<string | null>(null);
+
   // Diário de Aprendizado State
   const [colaboradoresDesempenho, setColaboradoresDesempenho] = useState<ColaboradorDesempenho[]>([]);
   const [isLoadingDesempenho, setIsLoadingDesempenho] = useState(false);
   const [desempenhoError, setDesempenhoError] = useState<string | null>(null);
   
   // Navigation State
-  const [activeTab, setActiveTab] = useState<'colaboradores' | 'capacitacoes' | 'diario'>('colaboradores');
+  const [activeTab, setActiveTab] = useState<'colaboradores' | 'capacitacoes' | 'treinamentos' | 'diario'>('colaboradores');
 
   // Toast and verification notifications
   const [toast, setToast] = useState<{
@@ -146,6 +153,25 @@ export default function App() {
       );
     } finally {
       setIsLoadingCapacitacoes(false);
+    }
+  };
+
+  // Fetch training courses when token and spreadsheetId are ready
+  const loadTreinamentos = async (targetId: string = spreadsheetId || '') => {
+    if (!targetId || !token) return;
+    
+    setIsLoadingTreinamentos(true);
+    setTreinamentosError(null);
+    try {
+      const data = await fetchTreinamentos(targetId);
+      setTreinamentos(data);
+    } catch (err: any) {
+      console.error(err);
+      setTreinamentosError(
+        err.message || 'Falha ao buscar os treinamentos. Verifique o acesso à planilha.'
+      );
+    } finally {
+      setIsLoadingTreinamentos(false);
     }
   };
 
@@ -249,10 +275,121 @@ export default function App() {
     }
   };
 
+  // Add a new training with double verification
+  const handleAddTreinamento = async (data: Omit<Treinamento, 'rowIndex'>) => {
+    if (!spreadsheetId || !token) return;
+    showToast('Enviando treinamento...', 'info', 'Aguardando gravação segura no sistema');
+    
+    try {
+      await addTreinamento(spreadsheetId, data);
+      
+      showToast('Verificando inserção...', 'info', 'Confirmando que o novo treinamento foi adicionado...');
+      
+      // Fetch fresh data to verify and update state
+      const freshData = await fetchTreinamentos(spreadsheetId);
+      const addedItem = freshData.find(t => t.codigo === data.codigo);
+      
+      if (addedItem) {
+        setTreinamentos(freshData);
+        showToast(
+          'Treinamento adicionado com sucesso!', 
+          'success', 
+          `O treinamento "${data.titulo}" foi cadastrado e verificado no sistema.`
+        );
+      } else {
+        setTreinamentos(freshData);
+        showToast(
+          'Treinamento adicionado!', 
+          'success', 
+          `O treinamento "${data.titulo}" foi adicionado com sucesso.`
+        );
+      }
+    } catch (err: any) {
+      console.error('Error saving and verifying treinamento:', err);
+      showToast(
+        'Erro ao salvar ou verificar treinamento', 
+        'error', 
+        err.message || 'Verifique se você possui permissão de escrita ou se sua conexão está estável.'
+      );
+    }
+  };
+
+  // Delete a training with verification check
+  const handleDeleteTreinamento = async (rowIndex: number) => {
+    if (!spreadsheetId || !token) return;
+    
+    const itemToDelete = treinamentos.find(t => t.rowIndex === rowIndex);
+    const titulo = itemToDelete ? itemToDelete.titulo : 'Treinamento';
+    
+    showToast(`Excluindo treinamento "${titulo}"...`, 'info', 'Removendo registro do banco de dados');
+    
+    try {
+      await deleteTreinamento(spreadsheetId, rowIndex);
+      
+      showToast('Sincronizando alterações...', 'info', 'Atualizando a lista de treinamentos...');
+      
+      const freshData = await fetchTreinamentos(spreadsheetId);
+      const stillExists = freshData.some(t => t.rowIndex === rowIndex && t.titulo === titulo);
+      
+      if (!stillExists) {
+        setTreinamentos(freshData);
+        showToast(
+          'Treinamento excluído com sucesso!', 
+          'success', 
+          `O treinamento "${titulo}" foi removido do sistema.`
+        );
+      } else {
+        setTreinamentos(freshData);
+        showToast(
+          'Treinamento excluído!', 
+          'success', 
+          `A lista de treinamentos foi sincronizada.`
+        );
+      }
+    } catch (err: any) {
+      console.error('Error deleting training:', err);
+      showToast(
+        'Erro ao excluir treinamento', 
+        'error', 
+        err.message || 'Não foi possível excluir. Verifique sua conexão ou permissões no sistema.'
+      );
+    }
+  };
+
+  // Save Treinamentos Atribuídos
+  const handleSaveTreinamentos = async (rowIndex: number, assigned: string[]) => {
+    if (!spreadsheetId || !token) return;
+    
+    showToast('Gravando treinamentos do Diário...', 'info', 'Salvando os treinamentos atribuídos na planilha PAINEL DESEMPENHO');
+    
+    try {
+      await updateTreinamentosAtribuidos(spreadsheetId, rowIndex, assigned);
+      
+      showToast('Verificando gravação...', 'info', 'Sincronizando as alterações com o sistema...');
+      
+      await loadDesempenhoData(spreadsheetId);
+      
+      showToast(
+        'Treinamentos atribuídos salvos!',
+        'success',
+        'Os treinamentos atribuídos ao colaborador foram atualizados e confirmados com sucesso.'
+      );
+    } catch (err: any) {
+      console.error('Error saving assigned trainings:', err);
+      showToast(
+        'Erro ao salvar Treinamentos Atribuídos',
+        'error',
+        err.message || 'Não foi possível salvar os treinamentos atribuídos. Verifique suas credenciais.'
+      );
+      throw err;
+    }
+  };
+
   useEffect(() => {
     if (token && spreadsheetId) {
       loadData();
       loadCapacitacoes();
+      loadTreinamentos();
       loadDesempenhoData();
     }
   }, [token, spreadsheetId]);
@@ -686,7 +823,7 @@ export default function App() {
             )}
 
             {/* Tab Switcher */}
-            <div className="flex border-b border-slate-100 space-x-1.5 p-1 bg-slate-50 rounded-2xl max-w-lg">
+            <div className="flex border-b border-slate-100 space-x-1.5 p-1 bg-slate-50 rounded-2xl max-w-2xl">
               <button
                 onClick={() => setActiveTab('colaboradores')}
                 className={`flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -708,6 +845,17 @@ export default function App() {
               >
                 <BookOpen className="h-4 w-4" />
                 <span>Capacitações</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('treinamentos')}
+                className={`flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'treinamentos'
+                    ? 'bg-white text-slate-800 shadow-xs border border-slate-100'
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                <GraduationCap className="h-4 w-4 text-indigo-600" />
+                <span>Treinamentos</span>
               </button>
               <button
                 onClick={() => setActiveTab('diario')}
@@ -804,6 +952,39 @@ export default function App() {
                   sheetUrl={currentSheetUrl}
                 />
               </>
+            ) : activeTab === 'treinamentos' ? (
+              /* Treinamentos View */
+              <>
+                {/* Error messaging */}
+                {treinamentosError && (
+                  <div className="bg-rose-50 border border-rose-100 text-rose-800 p-4 rounded-xl flex items-start space-x-3">
+                    <AlertCircle className="h-5 w-5 text-rose-500 flex-shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold">Falha na Sincronização</p>
+                      <p className="text-xs text-rose-600/90 leading-relaxed">
+                        {treinamentosError}. Verifique se a planilha possui a aba "TREINAMENTOS" e se sua conta de e-mail possui permissão.
+                      </p>
+                      <div className="pt-2 flex items-center space-x-3">
+                        <button
+                          onClick={() => loadTreinamentos()}
+                          className="text-xs font-bold text-rose-700 hover:underline cursor-pointer"
+                        >
+                          Tentar Novamente
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <TreinamentosTab
+                  treinamentos={treinamentos}
+                  onAddTreinamento={handleAddTreinamento}
+                  onDeleteTreinamento={handleDeleteTreinamento}
+                  isLoading={isLoadingTreinamentos}
+                  onRefresh={() => loadTreinamentos()}
+                  sheetUrl={currentSheetUrl}
+                />
+              </>
             ) : (
               /* Diário de Aprendizado View */
               <>
@@ -837,7 +1018,9 @@ export default function App() {
                   <DiarioAprendizadoTab
                     colaboradoresDesempenho={colaboradoresDesempenho}
                     capacitacoesDisponiveis={capacitacoes}
+                    treinamentosDisponiveis={treinamentos}
                     onSaveDesempenho={handleSaveDesempenho}
+                    onSaveTreinamentos={handleSaveTreinamentos}
                     isRefreshing={isLoadingDesempenho}
                     onRefresh={() => loadDesempenhoData()}
                   />

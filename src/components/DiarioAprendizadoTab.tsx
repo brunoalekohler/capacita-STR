@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { 
   BookOpen, Search, User, Edit2, Plus, Trash2, Award, 
-  HelpCircle, CheckCircle2, ChevronRight, Loader2, RefreshCw, X, AlertCircle, Sparkles
+  HelpCircle, CheckCircle2, ChevronRight, Loader2, RefreshCw, X, AlertCircle, Sparkles, GraduationCap
 } from 'lucide-react';
-import { ColaboradorDesempenho, Capacitacao, DesempenhoCapacitacao } from '../types';
+import { ColaboradorDesempenho, Capacitacao, DesempenhoCapacitacao, Treinamento } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface DiarioAprendizadoTabProps {
   colaboradoresDesempenho: ColaboradorDesempenho[];
   capacitacoesDisponiveis: Capacitacao[];
+  treinamentosDisponiveis: Treinamento[];
   onSaveDesempenho: (rowIndex: number, desempenhos: DesempenhoCapacitacao[]) => Promise<void>;
+  onSaveTreinamentos: (rowIndex: number, treinamentos: string[]) => Promise<void>;
   isRefreshing: boolean;
   onRefresh: () => void;
 }
@@ -17,13 +19,17 @@ interface DiarioAprendizadoTabProps {
 export default function DiarioAprendizadoTab({
   colaboradoresDesempenho,
   capacitacoesDisponiveis,
+  treinamentosDisponiveis,
   onSaveDesempenho,
+  onSaveTreinamentos,
   isRefreshing,
   onRefresh
 }: DiarioAprendizadoTabProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedColab, setSelectedColab] = useState<ColaboradorDesempenho | null>(null);
   const [editingDesempenhos, setEditingDesempenhos] = useState<DesempenhoCapacitacao[]>([]);
+  const [editingTreinamentos, setEditingTreinamentos] = useState<string[]>([]);
+  const [modalTab, setModalTab] = useState<'capacitacoes' | 'treinamentos'>('capacitacoes');
   const [isSaving, setIsSaving] = useState(false);
 
   // Filter collaborators
@@ -54,14 +60,16 @@ export default function DiarioAprendizadoTab({
   // Open Edit Modal
   const handleOpenEdit = (colab: ColaboradorDesempenho) => {
     setSelectedColab(colab);
-    // Clone current details to edit state (or initialize empty array if none)
     setEditingDesempenhos([...colab.desempenhos]);
+    setEditingTreinamentos([...(colab.treinamentos || [])]);
+    setModalTab('capacitacoes');
   };
 
   // Close Edit Modal
   const handleCloseEdit = () => {
     setSelectedColab(null);
     setEditingDesempenhos([]);
+    setEditingTreinamentos([]);
   };
 
   // Add a new empty training line (Max 10)
@@ -98,17 +106,37 @@ export default function DiarioAprendizadoTab({
     setEditingDesempenhos(updated);
   };
 
+  // Add assigned training slot
+  const handleAddTreinamentoAssignment = (codigo: string) => {
+    if (!codigo) return;
+    if (editingTreinamentos.length >= 50) {
+      alert('O sistema permite no máximo 50 treinamentos atribuídos por colaborador.');
+      return;
+    }
+    if (editingTreinamentos.includes(codigo)) {
+      alert('Este treinamento já está atribuído a este colaborador.');
+      return;
+    }
+    setEditingTreinamentos([...editingTreinamentos, codigo]);
+  };
+
+  // Remove assigned training slot
+  const handleRemoveTreinamentoAssignment = (index: number) => {
+    setEditingTreinamentos(editingTreinamentos.filter((_, i) => i !== index));
+  };
+
   // Save changes to Sheet
   const handleSave = async () => {
     if (!selectedColab) return;
     
     // Validate that if a code is specified, notes and desc are optional but valid
-    // Let's filter out completely empty entries (where code is empty)
     const validDesempenhos = editingDesempenhos.filter(d => d.codigo.trim() !== '');
+    const validTreinamentos = editingTreinamentos.filter(t => t.trim() !== '');
 
     setIsSaving(true);
     try {
       await onSaveDesempenho(selectedColab.rowIndex, validDesempenhos);
+      await onSaveTreinamentos(selectedColab.rowIndex, validTreinamentos);
       handleCloseEdit();
     } catch (err) {
       console.error(err);
@@ -193,7 +221,8 @@ export default function DiarioAprendizadoTab({
               <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
                 <th className="py-4 px-6">Colaborador</th>
                 <th className="py-4 px-6">Cargo / Unidade</th>
-                <th className="py-4 px-6 text-center">Capacitações Aplicadas</th>
+                <th className="py-4 px-6 text-center">Capacitações</th>
+                <th className="py-4 px-6 text-center">Treinamentos</th>
                 <th className="py-4 px-6 text-center">Média Geral</th>
                 <th className="py-4 px-6 text-right">Ações</th>
               </tr>
@@ -201,7 +230,7 @@ export default function DiarioAprendizadoTab({
             <tbody className="divide-y divide-slate-50 text-sm">
               {filteredColabs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-400">
+                  <td colSpan={6} className="py-12 text-center text-slate-400">
                     Nenhum colaborador encontrado com as informações fornecidas.
                   </td>
                 </tr>
@@ -239,6 +268,12 @@ export default function DiarioAprendizadoTab({
                       <td className="py-4.5 px-6 text-center">
                         <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-bold text-xs">
                           {stats.total} de 10
+                        </span>
+                      </td>
+
+                      <td className="py-4.5 px-6 text-center">
+                        <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-violet-50 text-violet-600 font-bold text-xs">
+                          {(colab.treinamentos || []).length} de 50
                         </span>
                       </td>
 
@@ -307,121 +342,240 @@ export default function DiarioAprendizadoTab({
                 </button>
               </div>
 
+              {/* Modal Tabs */}
+              <div className="flex border-b border-slate-100 bg-slate-50 p-1 rounded-none">
+                <button
+                  type="button"
+                  onClick={() => setModalTab('capacitacoes')}
+                  className={`flex-1 flex items-center justify-center space-x-2 py-3 text-xs font-bold transition-all cursor-pointer ${
+                    modalTab === 'capacitacoes'
+                      ? 'bg-white text-slate-800 shadow-xs border-b-2 border-b-violet-600'
+                      : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <Award className="h-4 w-4 text-violet-600" />
+                  <span>Capacitações ({editingDesempenhos.length} de 10)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalTab('treinamentos')}
+                  className={`flex-1 flex items-center justify-center space-x-2 py-3 text-xs font-bold transition-all cursor-pointer ${
+                    modalTab === 'treinamentos'
+                      ? 'bg-white text-slate-800 shadow-xs border-b-2 border-b-indigo-600'
+                      : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <GraduationCap className="h-4 w-4 text-indigo-600" />
+                  <span>Treinamentos Atribuídos ({editingTreinamentos.length} de 50)</span>
+                </button>
+              </div>
+
               {/* Modal Body / Scrollable Content */}
               <div className="p-6 overflow-y-auto space-y-6 flex-1">
-                <div className="bg-slate-50 rounded-xl p-4 flex items-start gap-2.5 text-xs text-slate-500 border border-slate-100">
-                  <HelpCircle className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-slate-700">Instruções de Preenchimento:</p>
-                    <p className="mt-0.5">As capacitações e notas inseridas aqui serão gravadas diretamente nas colunas correspondentes na aba <strong>PAINEL DESEMPENHO</strong> da sua planilha Google. Você pode lançar notas de 0 a 10 e detalhar o feedback de evolução.</p>
-                  </div>
-                </div>
-
-                {/* Training Lines */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                      <Award className="h-4 w-4 text-violet-600" />
-                      Capacitações Vinculadas ({editingDesempenhos.length} de 10)
-                    </h4>
-                    {editingDesempenhos.length < 10 && (
-                      <button
-                        type="button"
-                        onClick={handleAddTrainingLine}
-                        className="inline-flex items-center space-x-1 text-xs text-violet-600 hover:text-white hover:bg-violet-600 border border-violet-200 hover:border-violet-600 bg-violet-50/50 px-3 py-1.5 rounded-lg transition-all font-semibold cursor-pointer"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        <span>Vincular Capacitação</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {editingDesempenhos.length === 0 ? (
-                    <div className="border border-dashed border-slate-200 rounded-2xl py-12 text-center text-xs text-slate-400">
-                      Nenhuma capacitação vinculada a este colaborador ainda. Clique no botão acima para adicionar.
+                {modalTab === 'capacitacoes' ? (
+                  <>
+                    <div className="bg-slate-50 rounded-xl p-4 flex items-start gap-2.5 text-xs text-slate-500 border border-slate-100">
+                      <HelpCircle className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-slate-700">Instruções de Preenchimento:</p>
+                        <p className="mt-0.5">As capacitações e notas inseridas aqui serão gravadas diretamente nas colunas correspondentes na aba <strong>PAINEL DESEMPENHO</strong> da sua planilha Google. Você pode lançar notas de 0 a 10 e detalhar o feedback de evolução.</p>
+                      </div>
                     </div>
-                  ) : (
+
+                    {/* Training Lines */}
                     <div className="space-y-4">
-                      {editingDesempenhos.map((des, index) => {
-                        // Find matching details from available capacitações for premium label
-                        const currentCapDetails = capacitacoesDisponiveis.find(c => c.codigo === des.codigo);
-
-                        return (
-                          <div 
-                            key={index}
-                            className="bg-slate-50/70 border border-slate-100 rounded-xl p-4 space-y-3 relative group"
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                          <Award className="h-4 w-4 text-violet-600" />
+                          Capacitações Vinculadas ({editingDesempenhos.length} de 10)
+                        </h4>
+                        {editingDesempenhos.length < 10 && (
+                          <button
+                            type="button"
+                            onClick={handleAddTrainingLine}
+                            className="inline-flex items-center space-x-1 text-xs text-violet-600 hover:text-white hover:bg-violet-600 border border-violet-200 hover:border-violet-600 bg-violet-50/50 px-3 py-1.5 rounded-lg transition-all font-semibold cursor-pointer"
                           >
-                            {/* Line Number / Remove Button */}
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] text-slate-400 font-bold font-mono uppercase tracking-wider">
-                                {index + 1}ª Capacitação
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveTrainingLine(index)}
-                                className="text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition-all cursor-pointer"
-                                title="Desvincular capacitação"
+                            <Plus className="h-3.5 w-3.5" />
+                            <span>Vincular Capacitação</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {editingDesempenhos.length === 0 ? (
+                        <div className="border border-dashed border-slate-200 rounded-2xl py-12 text-center text-xs text-slate-400">
+                          Nenhuma capacitação vinculada a este colaborador ainda. Clique no botão acima para adicionar.
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {editingDesempenhos.map((des, index) => {
+                            // Find matching details from available capacitações for premium label
+                            const currentCapDetails = capacitacoesDisponiveis.find(c => c.codigo === des.codigo);
+
+                            return (
+                              <div 
+                                key={index}
+                                className="bg-slate-50/70 border border-slate-100 rounded-xl p-4 space-y-3 relative group"
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
+                                {/* Line Number / Remove Button */}
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] text-slate-400 font-bold font-mono uppercase tracking-wider">
+                                    {index + 1}ª Capacitação
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveTrainingLine(index)}
+                                    className="text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition-all cursor-pointer"
+                                    title="Desvincular capacitação"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                              {/* Selection Dropdown */}
-                              <div className="md:col-span-3 space-y-1">
-                                <label className="block text-[11px] font-bold text-slate-500 uppercase">Capacitação</label>
-                                <select
-                                  value={des.codigo}
-                                  onChange={(e) => handleUpdateLine(index, 'codigo', e.target.value)}
-                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-hidden"
-                                >
-                                  <option value="">-- Selecione uma Capacitação --</option>
-                                  {capacitacoesDisponiveis.map(c => (
-                                    <option key={c.codigo} value={c.codigo}>
-                                      {c.codigo} - {c.titulo} ({c.tipo})
-                                    </option>
-                                  ))}
-                                </select>
-                                {currentCapDetails && (
-                                  <p className="text-[10px] text-slate-400 italic line-clamp-1 mt-0.5">
-                                    {currentCapDetails.descricao}
-                                  </p>
-                                )}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                  {/* Selection Dropdown */}
+                                  <div className="md:col-span-3 space-y-1">
+                                    <label className="block text-[11px] font-bold text-slate-500 uppercase">Capacitação</label>
+                                    <select
+                                      value={des.codigo}
+                                      onChange={(e) => handleUpdateLine(index, 'codigo', e.target.value)}
+                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-hidden"
+                                    >
+                                      <option value="">-- Selecione uma Capacitação --</option>
+                                      {capacitacoesDisponiveis.map(c => (
+                                        <option key={c.codigo} value={c.codigo}>
+                                          {c.codigo} - {c.titulo} ({c.tipo})
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {currentCapDetails && (
+                                      <p className="text-[10px] text-slate-400 italic line-clamp-1 mt-0.5">
+                                        {currentCapDetails.descricao}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  {/* Score Field */}
+                                  <div className="space-y-1">
+                                    <label className="block text-[11px] font-bold text-slate-500 uppercase">Nota (0 - 10)</label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="10"
+                                      step="0.1"
+                                      placeholder="Nota"
+                                      value={des.nota !== null ? des.nota : ''}
+                                      onChange={(e) => handleUpdateLine(index, 'nota', e.target.value)}
+                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-hidden text-center font-bold"
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Development feedback */}
+                                <div className="space-y-1">
+                                  <label className="block text-[11px] font-bold text-slate-500 uppercase">Descrição do Desenvolvimento</label>
+                                  <textarea
+                                    rows={2}
+                                    placeholder="Insira considerações sobre o aprendizado, rendimento e aplicação prática do conteúdo..."
+                                    value={des.descricao}
+                                    onChange={(e) => handleUpdateLine(index, 'descricao', e.target.value)}
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 placeholder-slate-400 focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-hidden resize-none"
+                                  />
+                                </div>
                               </div>
-
-                              {/* Score Field */}
-                              <div className="space-y-1">
-                                <label className="block text-[11px] font-bold text-slate-500 uppercase">Nota (0 - 10)</label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="10"
-                                  step="0.1"
-                                  placeholder="Nota"
-                                  value={des.nota !== null ? des.nota : ''}
-                                  onChange={(e) => handleUpdateLine(index, 'nota', e.target.value)}
-                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-hidden text-center font-bold"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Development feedback */}
-                            <div className="space-y-1">
-                              <label className="block text-[11px] font-bold text-slate-500 uppercase">Descrição do Desenvolvimento</label>
-                              <textarea
-                                rows={2}
-                                placeholder="Insira considerações sobre o aprendizado, rendimento e aplicação prática do conteúdo..."
-                                value={des.descricao}
-                                onChange={(e) => handleUpdateLine(index, 'descricao', e.target.value)}
-                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 placeholder-slate-400 focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-hidden resize-none"
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-slate-50 rounded-xl p-4 flex items-start gap-2.5 text-xs text-slate-500 border border-slate-100">
+                      <HelpCircle className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-slate-700">Atribuição de Treinamentos (AO a CL):</p>
+                        <p className="mt-0.5">Aqui você pode atribuir até 50 treinamentos a este colaborador. Eles serão salvos nas colunas correspondentes (TREINAMENTO 1 na coluna AO, TREINAMENTO 2 na coluna AP, até TREINAMENTO 50 na coluna CL) no <strong>PAINEL DESEMPENHO</strong>.</p>
+                      </div>
+                    </div>
+
+                    {/* Treinamentos Assignment Controller */}
+                    <div className="space-y-4">
+                      <div className="bg-slate-50/80 border border-slate-150 rounded-xl p-4">
+                        <div className="space-y-1.5">
+                          <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Selecionar Treinamento para Atribuir</label>
+                          <select
+                            onChange={(e) => {
+                              handleAddTreinamentoAssignment(e.target.value);
+                              e.target.value = "";
+                            }}
+                            className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-755 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-hidden"
+                          >
+                            <option value="">-- Selecione um Treinamento para Atribuir --</option>
+                            {treinamentosDisponiveis.map(t => (
+                              <option key={t.codigo} value={t.codigo} disabled={editingTreinamentos.includes(t.codigo)}>
+                                {t.codigo} - {t.titulo} ({t.tipo})
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-[10px] text-slate-400">Selecione qualquer treinamento cadastrado para atribuir ao colaborador. Você pode reordenar ou remover a qualquer momento.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2">
+                        <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                          <GraduationCap className="h-4 w-4 text-indigo-600" />
+                          Treinamentos Atribuídos ({editingTreinamentos.length} de 50)
+                        </h4>
+                        {editingTreinamentos.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingTreinamentos([])}
+                            className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
+                          >
+                            Limpar Todos
+                          </button>
+                        )}
+                      </div>
+
+                      {editingTreinamentos.length === 0 ? (
+                        <div className="border border-dashed border-slate-200 rounded-2xl py-12 text-center text-xs text-slate-400">
+                          Nenhum treinamento atribuído a este colaborador ainda. Selecione um treinamento acima para começar.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[45vh] overflow-y-auto pr-1">
+                          {editingTreinamentos.map((tCode, index) => {
+                            const trDetails = treinamentosDisponiveis.find(t => t.codigo === tCode);
+                            return (
+                              <div key={index} className="flex items-center justify-between p-3.5 bg-slate-50/70 border border-slate-100 hover:border-slate-200 rounded-xl transition-all">
+                                <div className="flex items-center space-x-3 min-w-0">
+                                  <span className="flex-shrink-0 h-6 w-6 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-[10px] font-mono">
+                                    {index + 1}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <span className="font-bold text-slate-800 text-xs block truncate" title={trDetails?.titulo || tCode}>
+                                      {trDetails?.titulo || tCode}
+                                    </span>
+                                    <span className="text-[9px] font-mono font-bold text-slate-400 block uppercase">
+                                      {tCode} {trDetails ? `• ${trDetails.tipo}` : ''}
+                                    </span>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveTreinamentoAssignment(index)}
+                                  className="text-slate-400 hover:text-rose-650 p-1.5 rounded-lg hover:bg-rose-50 transition-all cursor-pointer flex-shrink-0 ml-2"
+                                  title="Remover atribuição"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Modal Footer */}

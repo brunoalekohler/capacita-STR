@@ -20,6 +20,14 @@ export interface Capacitacao {
   rowIndex: number;
 }
 
+export interface Treinamento {
+  codigo: string;
+  titulo: string;
+  descricao: string;
+  tipo: string;
+  rowIndex: number;
+}
+
 export interface SpreadsheetConfig {
   spreadsheetId: string;
   sheetName: string;
@@ -33,6 +41,7 @@ export interface DesempenhoCapacitacao {
 
 export interface ColaboradorDesempenho extends Colaborador {
   desempenhos: DesempenhoCapacitacao[];
+  treinamentos: string[];
 }
 
 export interface GoogleUser {
