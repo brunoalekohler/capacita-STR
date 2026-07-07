@@ -1124,7 +1124,7 @@ export default function App() {
           <p className="text-[10px] text-slate-400 font-mono">
             {spreadsheetId === 'local' 
               ? 'Banco de Dados Local (LocalStorage)' 
-              : `Sincronizado com Google Sheets (Planilha ID: ${spreadsheetId})`}
+              : `Sincronizado (ID: ${spreadsheetId})`}
           </p>
         </div>
       </footer>

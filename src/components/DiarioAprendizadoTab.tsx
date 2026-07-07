@@ -151,13 +151,13 @@ export default function DiarioAprendizadoTab({
       <div className="bg-white rounded-2xl border border-slate-100 shadow-xs p-6 md:p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
-            <span className="bg-violet-50 text-violet-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+            <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1">
               <Sparkles className="h-3 w-3" />
               Educação Corporativa
             </span>
           </div>
           <h2 className="font-display font-black text-2xl text-slate-800 mt-2 flex items-center gap-2">
-            <BookOpen className="h-6 w-6 text-violet-600" />
+            <BookOpen className="h-6 w-6 text-indigo-600" />
             Diário de Aprendizado
           </h2>
           <p className="text-xs text-slate-400 mt-1">Acompanhe as capacitações aplicadas, notas de desempenho e o desenvolvimento profissional de cada colaborador.</p>
@@ -176,9 +176,9 @@ export default function DiarioAprendizadoTab({
 
       {/* Stats and Search Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl p-6 text-white shadow-md shadow-indigo-100/30">
-          <Award className="h-8 w-8 text-violet-200 mb-2" />
-          <h4 className="text-xs font-bold text-violet-200 uppercase tracking-widest">Colaboradores Monitorados</h4>
+        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-6 text-white shadow-md shadow-indigo-100/30">
+          <Award className="h-8 w-8 text-indigo-200 mb-2" />
+          <h4 className="text-xs font-bold text-indigo-200 uppercase tracking-widest">Colaboradores Monitorados</h4>
           <p className="text-3xl font-black mt-1">{colaboradoresDesempenho.length}</p>
         </div>
 
@@ -207,7 +207,7 @@ export default function DiarioAprendizadoTab({
               placeholder="Buscar por colaborador ou cargo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all"
+              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
             />
           </div>
         </div>
@@ -247,7 +247,7 @@ export default function DiarioAprendizadoTab({
                       <td className="py-4.5 px-6">
                         <div className="flex items-center space-x-3">
                           <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-xs ${
-                            isDesativado ? 'bg-slate-200 text-slate-500' : 'bg-violet-100 text-violet-700'
+                            isDesativado ? 'bg-slate-200 text-slate-500' : 'bg-indigo-100 text-indigo-700'
                           }`}>
                             {colab.nomeCompleto.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
                           </div>
@@ -272,7 +272,7 @@ export default function DiarioAprendizadoTab({
                       </td>
 
                       <td className="py-4.5 px-6 text-center">
-                        <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-violet-50 text-violet-600 font-bold text-xs">
+                        <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 font-bold text-xs">
                           {(colab.treinamentos || []).length} de 50
                         </span>
                       </td>
@@ -294,7 +294,7 @@ export default function DiarioAprendizadoTab({
                       <td className="py-4.5 px-6 text-right">
                         <button
                           onClick={() => handleOpenEdit(colab)}
-                          className="inline-flex items-center space-x-1 bg-white hover:bg-slate-50 text-slate-600 hover:text-violet-600 border border-slate-200 hover:border-violet-200 rounded-xl px-3 py-2 text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                          className="inline-flex items-center space-x-1 bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-200 rounded-xl px-3 py-2 text-xs font-semibold shadow-xs transition-all cursor-pointer"
                         >
                           <Edit2 className="h-3.5 w-3.5" />
                           <span>Editar Notas</span>
@@ -322,11 +322,11 @@ export default function DiarioAprendizadoTab({
               {/* Modal Header */}
               <div className="bg-slate-900 text-white px-6 py-5 flex items-center justify-between border-b border-slate-800">
                 <div className="flex items-center space-x-3">
-                  <div className="h-10 w-10 rounded-full bg-violet-600 flex items-center justify-center font-bold">
+                  <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold">
                     <User className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <span className="text-[10px] text-violet-300 font-bold uppercase tracking-wider font-mono">
+                    <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider font-mono">
                       Editando Diário de Aprendizado
                     </span>
                     <h3 className="font-display font-black text-lg truncate leading-tight">
@@ -349,11 +349,11 @@ export default function DiarioAprendizadoTab({
                   onClick={() => setModalTab('capacitacoes')}
                   className={`flex-1 flex items-center justify-center space-x-2 py-3 text-xs font-bold transition-all cursor-pointer ${
                     modalTab === 'capacitacoes'
-                      ? 'bg-white text-slate-800 shadow-xs border-b-2 border-b-violet-600'
+                      ? 'bg-white text-slate-800 shadow-xs border-b-2 border-b-indigo-600'
                       : 'text-slate-400 hover:text-slate-600'
                   }`}
                 >
-                  <Award className="h-4 w-4 text-violet-600" />
+                  <Award className="h-4 w-4 text-indigo-600" />
                   <span>Capacitações ({editingDesempenhos.length} de 10)</span>
                 </button>
                 <button
@@ -386,14 +386,14 @@ export default function DiarioAprendizadoTab({
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                          <Award className="h-4 w-4 text-violet-600" />
+                          <Award className="h-4 w-4 text-indigo-600" />
                           Capacitações Vinculadas ({editingDesempenhos.length} de 10)
                         </h4>
                         {editingDesempenhos.length < 10 && (
                           <button
                             type="button"
                             onClick={handleAddTrainingLine}
-                            className="inline-flex items-center space-x-1 text-xs text-violet-600 hover:text-white hover:bg-violet-600 border border-violet-200 hover:border-violet-600 bg-violet-50/50 px-3 py-1.5 rounded-lg transition-all font-semibold cursor-pointer"
+                            className="inline-flex items-center space-x-1 text-xs text-indigo-600 hover:text-white hover:bg-indigo-600 border border-indigo-200 hover:border-indigo-600 bg-indigo-50/50 px-3 py-1.5 rounded-lg transition-all font-semibold cursor-pointer"
                           >
                             <Plus className="h-3.5 w-3.5" />
                             <span>Vincular Capacitação</span>
@@ -438,7 +438,7 @@ export default function DiarioAprendizadoTab({
                                     <select
                                       value={des.codigo}
                                       onChange={(e) => handleUpdateLine(index, 'codigo', e.target.value)}
-                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-hidden"
+                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-hidden"
                                     >
                                       <option value="">-- Selecione uma Capacitação --</option>
                                       {capacitacoesDisponiveis.map(c => (
@@ -465,7 +465,7 @@ export default function DiarioAprendizadoTab({
                                       placeholder="Nota"
                                       value={des.nota !== null ? des.nota : ''}
                                       onChange={(e) => handleUpdateLine(index, 'nota', e.target.value)}
-                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-hidden text-center font-bold"
+                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-hidden text-center font-bold"
                                     />
                                   </div>
                                 </div>
@@ -478,7 +478,7 @@ export default function DiarioAprendizadoTab({
                                     placeholder="Insira considerações sobre o aprendizado, rendimento e aplicação prática do conteúdo..."
                                     value={des.descricao}
                                     onChange={(e) => handleUpdateLine(index, 'descricao', e.target.value)}
-                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 placeholder-slate-400 focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-hidden resize-none"
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 placeholder-slate-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-hidden resize-none"
                                   />
                                 </div>
                               </div>

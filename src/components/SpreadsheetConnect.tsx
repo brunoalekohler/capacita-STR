@@ -69,6 +69,18 @@ export default function SpreadsheetConnect({ onConnect, onCreateNew, isCreating 
                 />
               </div>
               
+              <div className="bg-indigo-50/75 border border-indigo-100 rounded-xl p-3 text-xs text-slate-600">
+                <strong className="text-indigo-700 block mb-1">💡 Link da Planilha de Santa Rosa Malhas:</strong>
+                <a 
+                  href="https://docs.google.com/spreadsheets/d/1U4Rblh2OEae98PnzmtzoWdmCxAGXVnSgDaCGgFqDqRc/edit?usp=sharing" 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="text-indigo-600 hover:text-indigo-800 font-semibold underline break-all"
+                >
+                  https://docs.google.com/spreadsheets/d/1U4Rblh2OEae98PnzmtzoWdmCxAGXVnSgDaCGgFqDqRc/edit?usp=sharing
+                </a>
+              </div>
+              
               {error && (
                 <p className="text-xs text-rose-500 font-medium">{error}</p>
               )}
@@ -83,50 +95,7 @@ export default function SpreadsheetConnect({ onConnect, onCreateNew, isCreating 
             </form>
           </div>
 
-          <div className="relative flex py-2 items-center">
-            <div className="flex-grow border-t border-slate-100"></div>
-            <span className="flex-shrink mx-4 text-xs font-semibold text-slate-400 uppercase tracking-widest">OU</span>
-            <div className="flex-grow border-t border-slate-100"></div>
-          </div>
 
-          {/* Option B: Create */}
-          <div>
-            <div className="flex items-center space-x-2 mb-3">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-violet-50 text-violet-600 text-xs font-bold">2</span>
-              <h3 className="font-semibold text-slate-800 text-sm">Começar do zero</h3>
-            </div>
-            
-            <div className="bg-violet-50/50 border border-violet-100/50 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
-                  <Lock className="h-4 w-4 text-violet-600" />
-                  Inicializar novo banco de dados
-                </h4>
-                <p className="text-xs text-slate-500 max-w-md">
-                  Vou inicializar uma base de dados configurada com todos os campos necessários e dados de demonstração integrados.
-                </p>
-              </div>
-              
-              <button
-                type="button"
-                onClick={onCreateNew}
-                disabled={isCreating}
-                className="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold rounded-xl px-4 py-2.5 text-xs shadow-sm shadow-indigo-100 flex items-center justify-center space-x-1.5 disabled:opacity-50 transition-all duration-200"
-              >
-                {isCreating ? (
-                  <>
-                    <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Inicializando...</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Inicializar Banco</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
 
           {/* Mapping Info */}
           <div className="pt-4 border-t border-slate-100">
