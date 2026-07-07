@@ -43,18 +43,18 @@ export default function RelatorioColaboradorModal({
   });
 
   return (
-    <div className="fixed inset-0 z-100 overflow-y-auto no-print">
+    <div className="fixed inset-0 z-100 overflow-y-auto">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity" 
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity no-print" 
         onClick={onClose}
       />
 
-      <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-6">
-        <div className="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 w-full max-w-4xl flex flex-col max-h-[90vh]">
+      <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-6 print:p-0">
+        <div className="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 w-full max-w-4xl flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:my-0">
           
           {/* Modal Header */}
-          <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-100 bg-slate-50">
+          <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-100 bg-slate-50 no-print">
             <div className="flex items-center space-x-2.5">
               <div className="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
                 <FileText className="h-5 w-5" />
@@ -88,44 +88,50 @@ export default function RelatorioColaboradorModal({
           </div>
 
           {/* Scrollable Preview Area */}
-          <div className="p-8 overflow-y-auto bg-slate-100/50 flex-1 flex justify-center">
+          <div className="p-8 overflow-y-auto bg-slate-100/50 flex-1 flex justify-center print:p-0 print:bg-white print:overflow-visible">
             
             {/* The printable sheet */}
             <div 
               id="printable-report-area" 
-              className="bg-white w-full max-w-3xl p-10 shadow-sm border border-slate-200 rounded-xl relative overflow-hidden text-slate-700"
-              style={{ contentVisibility: 'auto' }}
+              className="bg-white w-full max-w-3xl p-10 shadow-sm border border-slate-200 rounded-xl relative overflow-hidden text-slate-700 print:p-0 print:border-none print:shadow-none"
             >
               {/* Custom CSS for printing injected locally to prevent leaking */}
               <style dangerouslySetInnerHTML={{ __html: `
                 @media print {
                   /* Reset everything */
-                  body {
+                  html, body {
                     background: white !important;
                     color: black !important;
                     margin: 0 !important;
                     padding: 0 !important;
+                    height: auto !important;
+                    overflow: visible !important;
                     -webkit-print-color-adjust: exact !important;
                     print-color-adjust: exact !important;
                   }
-                  /* Hide all screen components */
-                  #root, .no-print, [role="dialog"], .modal-backdrop {
-                    display: none !important;
+                  /* Hide absolutely everything on the page first */
+                  body * {
+                    visibility: hidden !important;
                   }
-                  /* Take over page */
+                  /* Bring back only the printable area and its offspring */
+                  #printable-report-area,
+                  #printable-report-area * {
+                    visibility: visible !important;
+                  }
+                  /* Reset layout for print */
                   #printable-report-area {
-                    display: block !important;
                     position: absolute !important;
                     left: 0 !important;
                     top: 0 !important;
                     width: 100% !important;
-                    height: auto !important;
+                    max-width: 100% !important;
                     margin: 0 !important;
-                    padding: 30px !important;
+                    padding: 40px !important;
                     border: none !important;
                     box-shadow: none !important;
                     background: white !important;
                     font-size: 12px !important;
+                    overflow: visible !important;
                   }
                   .print-page-break {
                     page-break-before: always !important;
