@@ -19,6 +19,7 @@ interface ColaboradoresTableProps {
   onToggleStatus: (colaborador: Colaborador) => Promise<void>;
   sheetUrl?: string;
   currentUserEmail?: string | null;
+  currentUserName?: string | null;
 }
 
 export default function ColaboradoresTable({
@@ -32,7 +33,8 @@ export default function ColaboradoresTable({
   isRefreshing,
   onToggleStatus,
   sheetUrl,
-  currentUserEmail
+  currentUserEmail,
+  currentUserName
 }: ColaboradoresTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'Todos' | 'Ativo' | 'Desativado'>('Todos');
@@ -461,6 +463,7 @@ export default function ColaboradoresTable({
         capacitacoesDisponiveis={capacitacoesDisponiveis}
         treinamentosDisponiveis={treinamentosDisponiveis}
         currentUserEmail={currentUserEmail}
+        currentUserName={currentUserName}
       />
     </div>
   );

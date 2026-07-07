@@ -13,6 +13,7 @@ interface RelatorioColaboradorModalProps {
   capacitacoesDisponiveis: Capacitacao[];
   treinamentosDisponiveis: Treinamento[];
   currentUserEmail?: string | null;
+  currentUserName?: string | null;
 }
 
 export default function RelatorioColaboradorModal({
@@ -21,7 +22,8 @@ export default function RelatorioColaboradorModal({
   colaboradorDesempenho,
   capacitacoesDisponiveis,
   treinamentosDisponiveis,
-  currentUserEmail
+  currentUserEmail,
+  currentUserName
 }: RelatorioColaboradorModalProps) {
   if (!isOpen || !colaboradorDesempenho) return null;
 
@@ -372,7 +374,7 @@ export default function RelatorioColaboradorModal({
                   <div className="text-center space-y-1">
                     <div className="border-b border-slate-400 h-10 mx-auto w-4/5" />
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Assinatura do Gestor / Avaliador</span>
-                    <span className="text-[11px] text-slate-600 block">Aura Hub Management</span>
+                    <span className="text-[11px] text-slate-600 block">{currentUserName || 'Treinador / Gestor'}</span>
                   </div>
                 </div>
 
@@ -392,7 +394,7 @@ export default function RelatorioColaboradorModal({
           </div>
 
           {/* Modal Footer */}
-          <div className="flex justify-end space-x-2.5 px-6 py-4 border-t border-slate-100 bg-slate-50">
+          <div className="flex justify-end space-x-2.5 px-6 py-4 border-t border-slate-100 bg-slate-50 no-print">
             <button
               onClick={onClose}
               className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-100 transition-all cursor-pointer"

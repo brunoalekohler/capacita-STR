@@ -959,6 +959,7 @@ export default function App() {
                     onToggleStatus={handleToggleStatus}
                     sheetUrl={currentSheetUrl}
                     currentUserEmail={user?.email}
+                    currentUserName={user?.displayName}
                   />
                 )}
               </>
