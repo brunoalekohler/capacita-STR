@@ -138,7 +138,7 @@ export default function App() {
     } catch (err: any) {
       console.error(err);
       setColaboradoresError(
-        err.message || 'Falha ao buscar os colaboradores. Verifique o acesso à planilha.'
+        err.message || 'Falha ao buscar os colaboradores. Verifique o acesso ao banco de dados.'
       );
     } finally {
       setIsLoadingColaboradores(false);
@@ -157,7 +157,7 @@ export default function App() {
     } catch (err: any) {
       console.error(err);
       setCapacitacoesError(
-        err.message || 'Falha ao buscar as capacitações. Verifique o acesso à planilha.'
+        err.message || 'Falha ao buscar as capacitações. Verifique o acesso ao banco de dados.'
       );
     } finally {
       setIsLoadingCapacitacoes(false);
@@ -176,7 +176,7 @@ export default function App() {
     } catch (err: any) {
       console.error(err);
       setTreinamentosError(
-        err.message || 'Falha ao buscar os treinamentos. Verifique o acesso à planilha.'
+        err.message || 'Falha ao buscar os treinamentos. Verifique o acesso ao banco de dados.'
       );
     } finally {
       setIsLoadingTreinamentos(false);
@@ -195,7 +195,7 @@ export default function App() {
     } catch (err: any) {
       console.error(err);
       setDesempenhoError(
-        err.message || 'Falha ao buscar os dados do Diário de Aprendizado. Verifique o acesso à planilha.'
+        err.message || 'Falha ao buscar os dados do Diário de Aprendizado. Verifique o acesso ao banco de dados.'
       );
     } finally {
       setIsLoadingDesempenho(false);
@@ -214,7 +214,7 @@ export default function App() {
     } catch (err: any) {
       console.error(err);
       setAuditoriaError(
-        err.message || 'Falha ao buscar os dados de auditorias. Verifique o acesso à planilha.'
+        err.message || 'Falha ao buscar os dados de auditorias. Verifique o acesso ao banco de dados.'
       );
     } finally {
       setIsLoadingAuditoria(false);
@@ -727,7 +727,7 @@ export default function App() {
               </div>
               <div className="space-y-1.5">
                 <h2 className="font-display font-bold text-xl text-slate-800">Conectar Banco de Dados</h2>
-                <p className="text-xs text-slate-400">Autorize o acesso ao Google Sheets para conectar a planilha.</p>
+                <p className="text-xs text-slate-400">Autorize o acesso seguro ao banco de dados em nuvem corporativo.</p>
               </div>
 
               <button
@@ -740,7 +740,7 @@ export default function App() {
                 ) : (
                   <Database className="h-4.5 w-4.5 mr-2" />
                 )}
-                <span>Conectar Google Sheets</span>
+                <span>Conectar Banco de Dados</span>
               </button>
 
               {/* Google Client ID Configuration */}
@@ -750,13 +750,13 @@ export default function App() {
                   onClick={() => setShowConfig(!showConfig)}
                   className="text-xs text-indigo-600 font-semibold hover:text-indigo-800 flex items-center justify-between w-full"
                 >
-                  <span>⚙️ Configuração do Google Client ID</span>
+                  <span>⚙️ Configuração de Integração de Login</span>
                   <span className="text-[10px] text-slate-400 font-normal">{showConfig ? 'Recolher ↑' : 'Configurar para Vercel/GitHub ↓'}</span>
                 </button>
                 
                 {showConfig && (
                   <div className="space-y-2 pt-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Google Client ID:</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Identificador do Cliente OAuth:</label>
                     <input 
                       type="text"
                       value={tempClientId}
@@ -769,7 +769,7 @@ export default function App() {
                       className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-50 font-mono"
                     />
                     <p className="text-[10px] text-slate-400 leading-relaxed">
-                      Para funcionar no GitHub Pages ou Vercel, crie um "ID do cliente OAuth" do tipo <strong>Aplicativo da Web</strong> no <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline hover:text-indigo-800">Google Cloud Console</a>.
+                      Para funcionar em ambientes externos, configure um identificador de SSO corporativo compatível.
                     </p>
                     <div className="bg-slate-50 p-2 rounded border border-slate-150 space-y-1 font-mono text-[9px] text-slate-500 break-all select-all">
                       <div><strong>Origens autorizadas:</strong> {window.location.origin}</div>
@@ -804,7 +804,7 @@ export default function App() {
                   <div>
                     <h3 className="text-sm font-bold text-slate-800">Você está no Modo Local (Demonstração)</h3>
                     <p className="text-xs text-slate-500 leading-relaxed">
-                      Os dados estão salvos localmente no seu navegador. Conecte com o Google Sheets para salvar na nuvem e colaborar em tempo real.
+                      Os dados estão salvos localmente no seu navegador. Conecte com o banco de dados corporativo para sincronizar e salvar na nuvem em tempo real.
                     </p>
                   </div>
                 </div>
@@ -815,19 +815,19 @@ export default function App() {
                   }}
                   className="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs px-4 py-2.5 rounded-xl cursor-pointer transition-all self-start sm:self-center"
                 >
-                  Conectar Google Sheets
+                  Conectar Banco de Dados
                 </button>
               </div>
             ) : (
               <div className="bg-emerald-50/70 border border-emerald-200/60 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-start space-x-3">
-                  <div className="bg-emerald-100/80 text-emerald-850 p-2 rounded-xl mt-0.5">
-                    <FileSpreadsheet className="h-5 w-5" />
+                  <div className="bg-emerald-100/80 text-emerald-800 p-2 rounded-xl mt-0.5">
+                    <Database className="h-5 w-5 text-emerald-600" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-800">Conectado ao Google Sheets</h3>
+                    <h3 className="text-sm font-bold text-slate-800">Conectado ao Banco de Dados Corporativo</h3>
                     <p className="text-xs text-slate-500 leading-relaxed">
-                      Sincronização em tempo real ativa. ID da planilha: <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[11px] font-bold">{spreadsheetId}</span>
+                      Sincronização em tempo real ativa. Chave do Repositório: <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[11px] font-bold">{spreadsheetId}</span>
                     </p>
                   </div>
                 </div>
@@ -838,7 +838,7 @@ export default function App() {
                     rel="noreferrer"
                     className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs px-4 py-2.5 rounded-xl cursor-pointer transition-all"
                   >
-                    Abrir Planilha
+                    Abrir Banco de Dados
                   </a>
                   <button
                     onClick={handleDisconnectSpreadsheet}

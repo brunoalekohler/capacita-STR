@@ -102,7 +102,7 @@ export default function AuditoriaTab({
               </div>
 
               <a
-                href="https://forms.gle/HT1W22UcBFWVMXCv9"
+                href="https://8h8fsjkw.forms.app/form/6a4ce9e25bda3f7025949db7"
                 target="_blank"
                 referrerPolicy="no-referrer"
                 rel="noopener noreferrer"
@@ -116,10 +116,11 @@ export default function AuditoriaTab({
             {/* Form Iframe taking almost 100% */}
             <div className="flex-1 w-full bg-slate-50 relative">
               <iframe
-                src="https://forms.gle/HT1W22UcBFWVMXCv9"
-                className="absolute inset-0 w-full h-full border-0"
+                src="https://8h8fsjkw.forms.app/form/6a4ce9e25bda3f7025949db7"
+                className="absolute inset-0 w-full h-full border-0 bg-transparent"
                 title="Formulário de Auditoria"
-                allow="geolocation"
+                allow="geolocation; microphone; camera"
+                allowFullScreen={true}
               />
             </div>
           </motion.div>
@@ -165,7 +166,7 @@ export default function AuditoriaTab({
                     className="inline-flex items-center space-x-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-2xl transition-all text-xs font-bold shadow-xs cursor-pointer"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
-                    <span>Acessar Planilha Google</span>
+                    <span>Acessar Banco de Dados</span>
                   </a>
                 )}
               </div>
@@ -194,9 +195,9 @@ export default function AuditoriaTab({
                     <Table className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-slate-700">Planilha não inicializada</h4>
+                    <h4 className="text-xs font-bold text-slate-700">Banco de Dados não inicializado</h4>
                     <p className="text-[11px] text-slate-400 leading-normal mt-1">
-                      A aba <strong>"AUDITORIA"</strong> não possui registros ou ainda não foi criada. O sistema tentará criá-la ao carregar os dados se o login com a conta Google estiver ativo.
+                      O repositório de <strong>"AUDITORIA"</strong> não possui registros ou ainda não foi criado. O sistema tentará criá-lo ao carregar os dados se a conexão com o servidor de dados estiver ativa.
                     </p>
                   </div>
                   <button

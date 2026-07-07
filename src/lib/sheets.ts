@@ -251,7 +251,7 @@ export const googleSignIn = async (providedClientId?: string): Promise<{ user: G
     try {
       const client = oauth2.initTokenClient({
         client_id: clientId,
-        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
+        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email openid',
         callback: async (tokenResponse: any) => {
           isSigningIn = false;
           if (tokenResponse.error) {
@@ -274,14 +274,14 @@ export const googleSignIn = async (providedClientId?: string): Promise<{ user: G
             if (userInfoRes.ok) {
               const info = await userInfoRes.json();
               cachedUser = {
-                displayName: info.name || info.given_name || 'Treinador Google',
+                displayName: info.name || info.given_name || 'Treinador',
                 email: info.email || '',
                 photoURL: info.picture || null,
               };
               sessionStorage.setItem('aura_user_info', JSON.stringify(cachedUser));
             } else {
               cachedUser = {
-                displayName: 'Treinador Google',
+                displayName: 'Treinador',
                 email: '',
                 photoURL: null,
               };
@@ -289,7 +289,7 @@ export const googleSignIn = async (providedClientId?: string): Promise<{ user: G
           } catch (e) {
             console.warn('Could not fetch user info, using fallback name:', e);
             cachedUser = {
-              displayName: 'Treinador Google',
+              displayName: 'Treinador',
               email: '',
               photoURL: null,
             };
