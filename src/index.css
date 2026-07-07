@@ -4,6 +4,19 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Outfit", sans-serif;
+
+  /* Santa Rosa Malhas brand blue mapped to indigo to dynamically update all UI colors */
+  --color-indigo-50: #f0f7fc;
+  --color-indigo-100: #e0eff9;
+  --color-indigo-200: #b9def3;
+  --color-indigo-300: #7dc3ea;
+  --color-indigo-400: #3ca4dd;
+  --color-indigo-500: #1b87c5;
+  --color-indigo-600: #045c94;
+  --color-indigo-700: #034b79;
+  --color-indigo-800: #023a5e;
+  --color-indigo-900: #012b47;
+  --color-indigo-950: #00192b;
 }
 
 /* Custom modern scrollbars */
