@@ -182,16 +182,24 @@ export default function RelatorioColaboradorModal({
 
               {/* Report Header Logo & Title */}
               <div className="flex justify-between items-start border-b-2 border-slate-800 pb-6 mb-8">
-                <div>
-                  <span className="text-[10px] font-black text-indigo-600 tracking-widest uppercase font-mono">
-                    Aura Hub • Painel de Gestão
-                  </span>
-                  <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight mt-1">
-                    Dossiê do Colaborador
-                  </h1>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Relatório unificado de cadastro, desempenho em capacitações e treinamentos atribuídos.
-                  </p>
+                <div className="flex items-start space-x-4">
+                  <img 
+                    src="/logo.png" 
+                    alt="Santa Rosa Malhas Logo" 
+                    className="h-14 w-14 object-contain mt-1"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div>
+                    <span className="text-[10px] font-black text-indigo-600 tracking-widest uppercase font-mono">
+                      Santa Rosa Malhas • Painel de Gestão
+                    </span>
+                    <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight mt-1">
+                      Dossiê do Colaborador
+                    </h1>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Relatório unificado de cadastro, desempenho em capacitações e treinamentos atribuídos.
+                    </p>
+                  </div>
                 </div>
                 
                 <div className="text-right">
