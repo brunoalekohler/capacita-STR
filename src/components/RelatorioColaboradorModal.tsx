@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, Printer, FileText, Award, GraduationCap, Building, 
   Calendar, Mail, User, Info, CheckCircle2, TrendingUp
@@ -42,16 +43,16 @@ export default function RelatorioColaboradorModal({
     timeStyle: 'short'
   });
 
-  return (
-    <div className="fixed inset-0 z-100 overflow-y-auto">
+  const modalContent = (
+    <div className="fixed inset-0 z-100 overflow-y-auto print-modal-root">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity no-print" 
         onClick={onClose}
       />
 
-      <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-6 print:p-0">
-        <div className="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 w-full max-w-4xl flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:my-0">
+      <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-6 print:p-0 print-modal-wrapper">
+        <div className="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 w-full max-w-4xl flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:my-0 print-modal-card">
           
           {/* Modal Header */}
           <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-100 bg-slate-50 no-print">
@@ -72,7 +73,7 @@ export default function RelatorioColaboradorModal({
             <div className="flex items-center space-x-2">
               <button
                 onClick={handlePrint}
-                className="inline-flex items-center space-x-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-700 font-bold px-4 py-2 rounded-xl shadow-xs transition-all cursor-pointer"
+                className="inline-flex items-center space-x-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-700 font-bold px-4 py-2 rounded-xl shadow-xs transition-all cursor-pointer animate-pulse"
               >
                 <Printer className="h-4 w-4" />
                 <span>Imprimir / PDF</span>
@@ -88,7 +89,7 @@ export default function RelatorioColaboradorModal({
           </div>
 
           {/* Scrollable Preview Area */}
-          <div className="p-8 overflow-y-auto bg-slate-100/50 flex-1 flex justify-center print:p-0 print:bg-white print:overflow-visible">
+          <div className="p-8 overflow-y-auto bg-slate-100/50 flex-1 flex justify-center print:p-0 print:bg-white print:overflow-visible print-modal-scroll">
             
             {/* The printable sheet */}
             <div 
@@ -98,6 +99,16 @@ export default function RelatorioColaboradorModal({
               {/* Custom CSS for printing injected locally to prevent leaking */}
               <style dangerouslySetInnerHTML={{ __html: `
                 @media print {
+                  /* Hide the main website content */
+                  #root {
+                    display: none !important;
+                  }
+                  
+                  /* Hide backdrops, headers, footers with no-print */
+                  .no-print {
+                    display: none !important;
+                  }
+
                   /* Reset everything */
                   html, body {
                     background: white !important;
@@ -109,28 +120,56 @@ export default function RelatorioColaboradorModal({
                     -webkit-print-color-adjust: exact !important;
                     print-color-adjust: exact !important;
                   }
-                  /* Hide absolutely everything on the page first */
-                  body * {
-                    visibility: hidden !important;
+
+                  /* Reset the modal fixed position container so it doesn't clip */
+                  .print-modal-root {
+                    position: static !important;
+                    display: block !important;
+                    width: auto !important;
+                    height: auto !important;
+                    overflow: visible !important;
+                    background: transparent !important;
                   }
-                  /* Bring back only the printable area and its offspring */
-                  #printable-report-area,
-                  #printable-report-area * {
-                    visibility: visible !important;
+
+                  /* Reset flex layout of the centered wrapper */
+                  .print-modal-wrapper {
+                    padding: 0 !important;
+                    display: block !important;
+                    min-height: auto !important;
                   }
-                  /* Reset layout for print */
-                  #printable-report-area {
-                    position: absolute !important;
-                    left: 0 !important;
-                    top: 0 !important;
+
+                  /* Reset the dialog card itself */
+                  .print-modal-card {
+                    max-height: none !important;
+                    position: static !important;
+                    display: block !important;
                     width: 100% !important;
                     max-width: 100% !important;
+                    border-radius: 0 !important;
+                    box-shadow: none !important;
                     margin: 0 !important;
+                    background: white !important;
+                    overflow: visible !important;
+                  }
+
+                  /* Reset the scroll container */
+                  .print-modal-scroll {
+                    background: white !important;
+                    padding: 0 !important;
+                    display: block !important;
+                    overflow: visible !important;
+                  }
+
+                  /* Reset the sheet */
+                  #printable-report-area {
+                    display: block !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
                     padding: 40px !important;
+                    margin: 0 !important;
                     border: none !important;
                     box-shadow: none !important;
                     background: white !important;
-                    font-size: 12px !important;
                     overflow: visible !important;
                   }
                   .print-page-break {
@@ -373,4 +412,6 @@ export default function RelatorioColaboradorModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
