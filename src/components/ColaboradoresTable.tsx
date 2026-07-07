@@ -1,34 +1,44 @@
 import React, { useState, useMemo } from 'react';
-import { Colaborador } from '../types';
+import { Colaborador, ColaboradorDesempenho, Capacitacao, Treinamento } from '../types';
 import { 
   Search, Users, Filter, UserCheck, UserX, Building, 
   ChevronRight, Calendar, Mail, FileText, User, Pencil, Plus, 
-  MapPin, Check, RefreshCw
+  MapPin, Check, RefreshCw, Award, GraduationCap
 } from 'lucide-react';
+import RelatorioColaboradorModal from './RelatorioColaboradorModal';
 
 interface ColaboradoresTableProps {
   colaboradores: Colaborador[];
+  colaboradoresDesempenho: ColaboradorDesempenho[];
+  capacitacoesDisponiveis: Capacitacao[];
+  treinamentosDisponiveis: Treinamento[];
   onEdit: (colaborador: Colaborador) => void;
   onAdd: () => void;
   onRefresh: () => void;
   isRefreshing: boolean;
   onToggleStatus: (colaborador: Colaborador) => Promise<void>;
   sheetUrl?: string;
+  currentUserEmail?: string | null;
 }
 
 export default function ColaboradoresTable({
   colaboradores,
+  colaboradoresDesempenho,
+  capacitacoesDisponiveis,
+  treinamentosDisponiveis,
   onEdit,
   onAdd,
   onRefresh,
   isRefreshing,
   onToggleStatus,
-  sheetUrl
+  sheetUrl,
+  currentUserEmail
 }: ColaboradoresTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'Todos' | 'Ativo' | 'Desativado'>('Todos');
   const [unitFilter, setUnitFilter] = useState<string>('Todas');
   const [selectedColaborador, setSelectedColaborador] = useState<Colaborador | null>(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Generate Unique list of units for filters
   const units = useMemo(() => {
@@ -82,6 +92,14 @@ export default function ColaboradoresTable({
       if (updated) setSelectedColaborador(updated);
     }
   }, [filteredColaboradores, colaboradores, selectedColaborador]);
+
+  // Find the performance/training details for the selected collaborator
+  const selectedDesempenho = useMemo(() => {
+    if (!selectedColaborador) return null;
+    return colaboradoresDesempenho.find(
+      (cd) => cd.rowIndex === selectedColaborador.rowIndex
+    ) || null;
+  }, [selectedColaborador, colaboradoresDesempenho]);
 
   return (
     <div className="space-y-6">
@@ -374,16 +392,55 @@ export default function ColaboradoresTable({
                     <p className="text-xs font-semibold text-indigo-600 break-all">{selectedColaborador.emailEmpresarial || 'Não informado'}</p>
                   </div>
                 </div>
+
+                {/* Performance & Training Summary Section */}
+                {selectedDesempenho && (
+                  <div className="pt-3 border-t border-slate-100 space-y-3">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Desempenho & Atribuições</span>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Capacitacoes summary */}
+                      <div className="p-3 bg-violet-50/50 rounded-xl border border-violet-100 flex items-center space-x-2.5">
+                        <Award className="h-5 w-5 text-violet-600 flex-shrink-0" />
+                        <div>
+                          <span className="text-[9px] font-bold text-violet-500 uppercase block leading-none">Capacitações</span>
+                          <span className="text-xs font-black text-slate-700 block mt-1">
+                            {selectedDesempenho.desempenhos.filter(d => d.codigo.trim() !== '').length} vinculadas
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Treinamentos summary */}
+                      <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 flex items-center space-x-2.5">
+                        <GraduationCap className="h-5 w-5 text-indigo-600 flex-shrink-0" />
+                        <div>
+                          <span className="text-[9px] font-bold text-indigo-500 uppercase block leading-none font-sans">Treinamentos</span>
+                          <span className="text-xs font-black text-slate-700 block mt-1">
+                            {(selectedDesempenho.treinamentos || []).length} atribuídos
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Edit button in details panel */}
-              <div className="pt-4 border-t border-slate-100">
+              {/* Edit and PDF buttons in details panel */}
+              <div className="pt-4 border-t border-slate-100 space-y-2">
                 <button
                   onClick={() => onEdit(selectedColaborador)}
                   className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-xs transition-all duration-200 flex items-center justify-center space-x-1.5"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                   <span>Editar Cadastro Completo</span>
+                </button>
+                
+                <button
+                  onClick={() => setIsReportModalOpen(true)}
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs transition-all duration-200 flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>Gerar Relatório (PDF)</span>
                 </button>
               </div>
             </>
@@ -395,6 +452,16 @@ export default function ColaboradoresTable({
           )}
         </div>
       </div>
+
+      {/* Relatório PDF Modal */}
+      <RelatorioColaboradorModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        colaboradorDesempenho={selectedDesempenho}
+        capacitacoesDisponiveis={capacitacoesDisponiveis}
+        treinamentosDisponiveis={treinamentosDisponiveis}
+        currentUserEmail={currentUserEmail}
+      />
     </div>
   );
 }

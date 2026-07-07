@@ -1,4 +1,4 @@
-import { Colaborador, Capacitacao, Treinamento, ColaboradorDesempenho, DesempenhoCapacitacao, GoogleUser } from '../types';
+import { Colaborador, Capacitacao, Treinamento, ColaboradorDesempenho, DesempenhoCapacitacao, GoogleUser, AuditoriaData } from '../types';
 
 let cachedAccessToken: string | null = sessionStorage.getItem('aura_oauth_token');
 const defaultLocalUser: GoogleUser = {
@@ -1383,5 +1383,103 @@ export async function updateTreinamentosAtribuidos(
     }
   );
 }
+
+// --- AUDITORIA INTEGRATION ---
+
+const DEFAULT_AUDITORIA: AuditoriaData = {
+  headers: ['Carimbo de data/hora', 'Nome do Auditor', 'Colaborador Auditado', 'Setor', 'Conformidade dos Equipamentos', 'Observações'],
+  rows: [
+    ['06/07/2026 10:15:30', 'Carlos Silva', 'Ana Souza Silva', 'Matriz São Paulo', 'Conforme', 'Uso completo de EPIs verificado.'],
+    ['06/07/2026 14:22:15', 'Carlos Silva', 'Mariana Oliveira Lima', 'Filial Belo Horizonte', 'Conforme', 'Organização do posto de trabalho excelente.'],
+    ['07/07/2026 09:11:04', 'Aline Costa', 'Carlos Eduardo Santos', 'Filial Rio de Janeiro', 'Não Conforme', 'Posto desorganizado e ferramentas fora do local.']
+  ]
+};
+
+const getLocalAuditorias = (): AuditoriaData => {
+  const stored = localStorage.getItem('aura_local_auditorias');
+  if (!stored) {
+    localStorage.setItem('aura_local_auditorias', JSON.stringify(DEFAULT_AUDITORIA));
+    return DEFAULT_AUDITORIA;
+  }
+  return JSON.parse(stored);
+};
+
+export const saveLocalAuditorias = (data: AuditoriaData) => {
+  localStorage.setItem('aura_local_auditorias', JSON.stringify(data));
+};
+
+export async function ensureAuditoriaSheet(spreadsheetId: string): Promise<void> {
+  if (spreadsheetId === 'local' || !cachedAccessToken || cachedAccessToken === 'local') {
+    return;
+  }
+  try {
+    const details = await getSpreadsheetDetails(spreadsheetId);
+    const hasAuditoria = details.sheets?.some(
+      (s: any) => s.properties?.title?.toUpperCase() === 'AUDITORIA'
+    );
+    if (!hasAuditoria) {
+      await sheetsApiRequest(`v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+        method: 'POST',
+        body: JSON.stringify({
+          requests: [
+            {
+              addSheet: {
+                properties: {
+                  title: 'AUDITORIA',
+                },
+              },
+            },
+          ],
+        }),
+      });
+
+      const headers = [
+        ['Carimbo de data/hora', 'Nome do Auditor', 'Colaborador Auditado', 'Setor', 'Conformidade dos Equipamentos', 'Observações'],
+        ['06/07/2026 10:15:30', 'Carlos Silva', 'Ana Souza Silva', 'Matriz São Paulo', 'Conforme', 'Uso completo de EPIs verificado.'],
+        ['06/07/2026 14:22:15', 'Carlos Silva', 'Mariana Oliveira Lima', 'Filial Belo Horizonte', 'Conforme', 'Organização do posto de trabalho excelente.']
+      ];
+      await sheetsApiRequest(
+        `v4/spreadsheets/${spreadsheetId}/values/AUDITORIA!A1:F3?valueInputOption=USER_ENTERED`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            range: 'AUDITORIA!A1:F3',
+            majorDimension: 'ROWS',
+            values: headers,
+          }),
+        }
+      );
+    }
+  } catch (err) {
+    console.error('Error ensuring AUDITORIA sheet exists:', err);
+  }
+}
+
+export async function fetchAuditorias(spreadsheetId: string): Promise<AuditoriaData> {
+  if (spreadsheetId === 'local' || !cachedAccessToken || cachedAccessToken === 'local') {
+    return getLocalAuditorias();
+  }
+  try {
+    await ensureAuditoriaSheet(spreadsheetId);
+    
+    const data = await sheetsApiRequest(`v4/spreadsheets/${spreadsheetId}/values/AUDITORIA!A:Z`);
+    const rows = data.values as string[][] | undefined;
+    if (!rows || rows.length === 0) {
+      return { headers: [], rows: [] };
+    }
+
+    const headers = rows[0].map(h => h.trim());
+    const dataRows = rows.slice(1).filter(row => row.some(cell => cell && cell.trim() !== ''));
+
+    return {
+      headers,
+      rows: dataRows
+    };
+  } catch (error) {
+    console.error('Error fetching auditorias:', error);
+    throw error;
+  }
+}
+
 
 

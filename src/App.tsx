@@ -5,9 +5,10 @@ import {
   fetchCapacitacoes, addCapacitacao, deleteCapacitacao,
   fetchDiarioAprendizado, updateDiarioAprendizado,
   getGoogleClientId, setGoogleClientId,
-  fetchTreinamentos, addTreinamento, deleteTreinamento, updateTreinamentosAtribuidos
+  fetchTreinamentos, addTreinamento, deleteTreinamento, updateTreinamentosAtribuidos,
+  fetchAuditorias
 } from './lib/sheets';
-import { Colaborador, Capacitacao, Treinamento, ColaboradorDesempenho, DesempenhoCapacitacao, GoogleUser } from './types';
+import { Colaborador, Capacitacao, Treinamento, ColaboradorDesempenho, DesempenhoCapacitacao, GoogleUser, AuditoriaData } from './types';
 import Header from './components/Header';
 import SpreadsheetConnect from './components/SpreadsheetConnect';
 import ColaboradoresTable from './components/ColaboradoresTable';
@@ -15,9 +16,11 @@ import ColaboradorForm from './components/ColaboradorForm';
 import CapacitacoesTab from './components/CapacitacoesTab';
 import TreinamentosTab from './components/TreinamentosTab';
 import DiarioAprendizadoTab from './components/DiarioAprendizadoTab';
+import AuditoriaTab from './components/AuditoriaTab';
 import { 
   GraduationCap, Sparkles, CheckCircle2, ChevronRight, FileSpreadsheet,
-  AlertCircle, Database, HelpCircle, Loader2, ArrowLeftRight, BookOpen, Users, Lock
+  AlertCircle, Database, HelpCircle, Loader2, ArrowLeftRight, BookOpen, Users, Lock,
+  ClipboardCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -63,9 +66,14 @@ export default function App() {
   const [colaboradoresDesempenho, setColaboradoresDesempenho] = useState<ColaboradorDesempenho[]>([]);
   const [isLoadingDesempenho, setIsLoadingDesempenho] = useState(false);
   const [desempenhoError, setDesempenhoError] = useState<string | null>(null);
+
+  // Auditoria State
+  const [auditoriaData, setAuditoriaData] = useState<AuditoriaData | null>(null);
+  const [isLoadingAuditoria, setIsLoadingAuditoria] = useState(false);
+  const [auditoriaError, setAuditoriaError] = useState<string | null>(null);
   
   // Navigation State
-  const [activeTab, setActiveTab] = useState<'colaboradores' | 'capacitacoes' | 'treinamentos' | 'diario'>('colaboradores');
+  const [activeTab, setActiveTab] = useState<'colaboradores' | 'capacitacoes' | 'treinamentos' | 'diario' | 'auditoria'>('colaboradores');
 
   // Toast and verification notifications
   const [toast, setToast] = useState<{
@@ -191,6 +199,25 @@ export default function App() {
       );
     } finally {
       setIsLoadingDesempenho(false);
+    }
+  };
+
+  // Fetch auditoria records when token and spreadsheetId are ready
+  const loadAuditoriaData = async (targetId: string = spreadsheetId || '') => {
+    if (!targetId || !token) return;
+    
+    setIsLoadingAuditoria(true);
+    setAuditoriaError(null);
+    try {
+      const data = await fetchAuditorias(targetId);
+      setAuditoriaData(data);
+    } catch (err: any) {
+      console.error(err);
+      setAuditoriaError(
+        err.message || 'Falha ao buscar os dados de auditorias. Verifique o acesso à planilha.'
+      );
+    } finally {
+      setIsLoadingAuditoria(false);
     }
   };
 
@@ -391,6 +418,7 @@ export default function App() {
       loadCapacitacoes();
       loadTreinamentos();
       loadDesempenhoData();
+      loadAuditoriaData();
     }
   }, [token, spreadsheetId]);
 
@@ -823,10 +851,10 @@ export default function App() {
             )}
 
             {/* Tab Switcher */}
-            <div className="flex border-b border-slate-100 space-x-1.5 p-1 bg-slate-50 rounded-2xl max-w-2xl">
+            <div className="flex border-b border-slate-100 space-x-1.5 p-1 bg-slate-50 rounded-2xl max-w-3xl overflow-x-auto md:overflow-x-visible">
               <button
                 onClick={() => setActiveTab('colaboradores')}
-                className={`flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'colaboradores'
                     ? 'bg-white text-slate-800 shadow-xs border border-slate-100'
                     : 'text-slate-400 hover:text-slate-600'
@@ -837,7 +865,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setActiveTab('capacitacoes')}
-                className={`flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'capacitacoes'
                     ? 'bg-white text-slate-800 shadow-xs border border-slate-100'
                     : 'text-slate-400 hover:text-slate-600'
@@ -848,7 +876,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setActiveTab('treinamentos')}
-                className={`flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'treinamentos'
                     ? 'bg-white text-slate-800 shadow-xs border border-slate-100'
                     : 'text-slate-400 hover:text-slate-600'
@@ -859,7 +887,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setActiveTab('diario')}
-                className={`flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'diario'
                     ? 'bg-white text-slate-800 shadow-xs border border-slate-100'
                     : 'text-slate-400 hover:text-slate-600'
@@ -867,6 +895,17 @@ export default function App() {
               >
                 <GraduationCap className="h-4 w-4" />
                 <span>Diário de Aprendizado</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('auditoria')}
+                className={`flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  activeTab === 'auditoria'
+                    ? 'bg-white text-teal-600 shadow-xs border border-slate-100'
+                    : 'text-slate-400 hover:text-teal-600/80'
+                }`}
+              >
+                <ClipboardCheck className="h-4 w-4 text-teal-500" />
+                <span>Auditoria</span>
               </button>
             </div>
 
@@ -910,12 +949,16 @@ export default function App() {
                 ) : (
                   <ColaboradoresTable
                     colaboradores={colaboradores}
+                    colaboradoresDesempenho={colaboradoresDesempenho}
+                    capacitacoesDisponiveis={capacitacoes}
+                    treinamentosDisponiveis={treinamentos}
                     onEdit={handleOpenEditForm}
                     onAdd={handleOpenAddForm}
                     onRefresh={() => loadData()}
                     isRefreshing={isLoadingColaboradores}
                     onToggleStatus={handleToggleStatus}
                     sheetUrl={currentSheetUrl}
+                    currentUserEmail={user?.email}
                   />
                 )}
               </>
@@ -985,7 +1028,7 @@ export default function App() {
                   sheetUrl={currentSheetUrl}
                 />
               </>
-            ) : (
+            ) : activeTab === 'diario' ? (
               /* Diário de Aprendizado View */
               <>
                 {/* Error messaging */}
@@ -1025,6 +1068,36 @@ export default function App() {
                     onRefresh={() => loadDesempenhoData()}
                   />
                 )}
+              </>
+            ) : (
+              /* Auditoria View */
+              <>
+                {auditoriaError && (
+                  <div className="bg-rose-50 border border-rose-100 text-rose-800 p-4 rounded-xl flex items-start space-x-3 mb-6">
+                    <AlertCircle className="h-5 w-5 text-rose-500 flex-shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold">Falha na Sincronização</p>
+                      <p className="text-xs text-rose-600/90 leading-relaxed">
+                        {auditoriaError}. Verifique se a planilha possui a aba "AUDITORIA" e se sua conta de e-mail possui permissão.
+                      </p>
+                      <div className="pt-2 flex items-center space-x-3">
+                        <button
+                          onClick={() => loadAuditoriaData()}
+                          className="text-xs font-bold text-rose-700 hover:underline cursor-pointer"
+                        >
+                          Tentar Novamente
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <AuditoriaTab
+                  auditoriaData={auditoriaData}
+                  isLoading={isLoadingAuditoria}
+                  onRefresh={() => loadAuditoriaData()}
+                  sheetUrl={currentSheetUrl}
+                />
               </>
             )}
           </div>

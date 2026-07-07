@@ -50,3 +50,9 @@ export interface GoogleUser {
   photoURL: string | null;
 }
 
+export interface AuditoriaData {
+  headers: string[];
+  rows: string[][];
+}
+
+
